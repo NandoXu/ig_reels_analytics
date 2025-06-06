@@ -267,12 +267,16 @@ async def scrape_views_selenium(post_url, app_instance, post_shortcode, owner_us
     
     # Setup Chrome options for headless and persistent user data
     options = Options()
-    options.headless = True # This driver should always be headless for scraping
+    # IMPORTANT CHANGE: Use --headless=new for better headless behavior with newer Chrome versions
+    options.add_argument("--headless=new") 
     options.add_argument("--window-size=1920,1080")
     options.add_argument(f"user-data-dir={BROWSER_USER_DATA_DIR}")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--log-level=3")
+    options.add_argument("--log-level=3") # Suppress verbose Chrome logs
+    options.add_argument("--disable-gpu") # Often recommended for headless
+    options.add_argument("--hide-scrollbars") # Hide scrollbars
+    options.add_argument("--mute-audio") # Mute audio
     
     # Ensure binary_location is explicitly set if it was found by get_browser_and_driver_versions
     if CHROME_BINARY_LOCATION:

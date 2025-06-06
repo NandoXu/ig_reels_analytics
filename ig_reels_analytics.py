@@ -1,4 +1,4 @@
-# ig_post_analitics.py
+# ig_reels_analytics.py
 import tkinter as tk
 import logging
 import os
@@ -42,6 +42,8 @@ if not os.path.exists(BROWSER_USER_DATA_DIR):
 
 # Global variable for the root Tkinter window, used for exception handling context
 root_tk_window = None
+# Global variable to hold the main app instance so it can be passed to login_sequence
+app = None 
 
 def global_exception_handler(exc_type, exc_value, exc_traceback):
     """
@@ -56,9 +58,6 @@ def global_exception_handler(exc_type, exc_value, exc_traceback):
         print(f"Original Unhandled Tkinter exception: {exc_type} - {exc_value}")
         traceback.print_exc()
 
-    # Removed messagebox.showerror from here, errors now only go to console/log.
-    # The application might still exit if the error is fatal, but without a blocking popup.
-
 
 if __name__ == "__main__":
     try:
@@ -69,11 +68,25 @@ if __name__ == "__main__":
         # Redirect Tkinter's internal exception reporting to our custom handler
         root_tk_window.report_callback_exception = global_exception_handler
 
-        # Run the login sequence to get the Instaloader username (handles its own dialogs)
-        logged_in_instaloader_username = login_sequence(root_tk_window)
+        # Initialize the main Instagram Scraper Application GUI first
+        # This instance reference is needed by login_sequence
+        app = InstagramScraperApp(root_tk_window) 
 
-        # Initialize and run the main Instagram Scraper Application GUI
-        app = InstagramScraperApp(root_tk_window, logged_in_username=logged_in_instaloader_username)
+        # Run the login sequence to get the Instaloader username
+        # Pass the 'app' instance as 'app_instance_ref'
+        logged_in_instaloader_username = login_sequence(root_tk_window, app)
+
+        # Update the app with the logged-in username after login sequence completes
+        app.logged_in_username = logged_in_instaloader_username
+        app._update_username_display(logged_in_instaloader_username)
+        if logged_in_instaloader_username:
+            app.set_status(f"Ready. Logged in as Instaloader user: {logged_in_instaloader_username}.")
+        else:
+            app.set_status("Ready. Not logged in to Instaloader (anonymous scraping will be limited).")
+        
+        # Load data from DB into UI after login status is established
+        app._load_data_from_db_into_ui()
+        
         root_tk_window.mainloop() # Start the standard Tkinter event loop
 
     except SystemExit:
@@ -91,8 +104,5 @@ if __name__ == "__main__":
             print(f"Failed to write to {error_report_file}: {e_file_log}")
             print(f"Original startup error: {e_startup}\n{tb_str_startup}")
         
-        # Removed the messagebox.showerror for startup errors to avoid pop-ups.
-        # User will see messages in the console and log files.
-
         import sys
         sys.exit(1) # Exit the application if a critical startup error occurs

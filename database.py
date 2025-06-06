@@ -2,7 +2,7 @@ import sqlite3
 import os
 import logging
 from datetime import datetime
-import re # ADDED: import re
+import re
 
 # --- Configuration ---
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -13,6 +13,7 @@ def setup_database():
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
     try:
+        # Added 'error' column to the table schema
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS scraped_posts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -24,7 +25,8 @@ def setup_database():
                 likes TEXT,
                 comments TEXT,
                 views TEXT,
-                engagement_rate TEXT
+                engagement_rate TEXT,
+                error TEXT -- Added error column
             )
         """)
         conn.commit()
@@ -48,12 +50,13 @@ def save_to_database(post_data_dict, post_shortcode):
             "likes": str(post_data_dict.get("likes", "N/A")),
             "comments": str(post_data_dict.get("comments", "N/A")),
             "views": str(post_data_dict.get("views", "N/A")),
-            "engagement_rate": str(post_data_dict.get("engagement_rate", "N/A"))
+            "engagement_rate": str(post_data_dict.get("engagement_rate", "N/A")),
+            "error": post_data_dict.get("error", None) # Save the error status
         }
         cursor.execute("""
             INSERT OR REPLACE INTO scraped_posts
-            (post_shortcode, link, post_date, last_record, owner, likes, comments, views, engagement_rate)
-            VALUES (:post_shortcode, :link, :post_date, :last_record, :owner, :likes, :comments, :views, :engagement_rate)
+            (post_shortcode, link, post_date, last_record, owner, likes, comments, views, engagement_rate, error)
+            VALUES (:post_shortcode, :link, :post_date, :last_record, :owner, :likes, :comments, :views, :engagement_rate, :error)
         """, db_row)
         conn.commit()
         logging.info(f"Data for {post_shortcode} saved to database.")
@@ -68,9 +71,11 @@ def load_data_from_db():
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
 
+    # Explicitly select all columns in the order they appear in the table creation
+    # This order must match db_columns in ui.py for correct mapping
     db_columns = [
-        "link", "post_date", "last_record",
-        "owner", "likes", "comments", "views", "engagement_rate"
+        "post_shortcode", "link", "post_date", "last_record",
+        "owner", "likes", "comments", "views", "engagement_rate", "error"
     ]
     select_query = f"SELECT {', '.join(db_columns)} FROM scraped_posts ORDER BY last_record DESC"
     try:
@@ -89,9 +94,6 @@ def delete_data_from_db(link):
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
     try:
-        # Extract shortcode from the link to ensure we delete by primary key (post_shortcode)
-        # assuming post_shortcode is the unique identifier for a post in your DB.
-        # This prevents issues if the 'link' column isn't perfectly unique or canonical.
         shortcode_match = re.search(r"/(?:p|reel|reels)/([A-Za-z0-9_-]+)", link)
         if shortcode_match:
             post_shortcode = shortcode_match.group(1)

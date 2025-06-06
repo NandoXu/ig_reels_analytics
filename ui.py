@@ -4,46 +4,41 @@ import threading
 import asyncio
 import csv
 import logging
-from datetime import datetime
+from datetime import datetime, timezone # Import timezone for UTC conversion
 import os
-import time # Import time for delays in Selenium login thread
-import re # Import re for regular expressions
-import json # ADDED: Import the json module
+import time
+import re
+import json
 
 import instaloader
 
-# Import CustomTkinter
 import customtkinter as ctk
 
-# Selenium imports (kept for scraper dependency clarity)
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import WebDriverException, TimeoutException, NoSuchElementException
+from selenium.common.exceptions import WebDriverException, TimeoutException, NoSuchElementException, ElementClickInterceptedException
 
 
-# Import necessary functions and variables from scraper and database modules
 from scraper import scrape_post_data, get_shortcode_from_url, L, USER_DATA_DIR, BROWSER_USER_DATA_DIR, CHROMEDRIVER_EXECUTABLE_PATH, CHROME_BINARY_LOCATION
 from database import setup_database, DB_FILE, load_data_from_db, save_to_database, delete_data_from_db
 
 
 # --- CustomTkinter Comprehensive Theme Definition ---
-# Define a custom theme dictionary with all expected keys to prevent KeyErrors
-# Adapted to your white/light-blue scheme.
 custom_theme_dict = {
     "CTk": {
-        "fg_color": ["white", "white"], # Overall app background (light, dark)
-        "text_color": ["#333333", "#333333"], # Default text color
+        "fg_color": ["white", "white"],
+        "text_color": ["#333333", "#333333"],
     },
     "CTkFrame": {
-        "fg_color": ["white", "white"], # Frame background
+        "fg_color": ["white", "white"],
         "top_fg_color": ["white", "white"],
-        "border_color": ["#E0E0E0", "#E0E0E0"], # Light grey border for frames
+        "border_color": ["#E0E0E0", "#E0E0E0"],
         "border_width": 0,
-        "corner_radius": 10, # Consistent with your design
+        "corner_radius": 10,
     },
     "CTkButton": {
         "fg_color": ["#C6E7FF", "#C6E7FF"],
@@ -56,20 +51,20 @@ custom_theme_dict = {
     },
     "CTkLabel": {
         "text_color": ["#333333", "#333333"],
-        "fg_color": ["transparent", "transparent"], # Labels usually have transparent backgrounds
-        "corner_radius": 0, # No rounding for labels by default
+        "fg_color": ["transparent", "transparent"],
+        "corner_radius": 0,
     },
     "CTkEntry": {
-        "fg_color": ["white", "white"], # Changed to white for input fields
-        "border_color": ["#A0A0A0", "#A0A0A0"], # Entry border color (grey)
+        "fg_color": ["white", "white"],
+        "border_color": ["#A0A0A0", "#A0A0A0"],
         "text_color": ["#333333", "#333333"],
         "placeholder_text_color": ["#666666", "#666666"],
-        "border_width": 2, # Made thicker
+        "border_width": 2,
         "corner_radius": 5,
     },
     "CTkProgressBar": {
-        "fg_color": ["#C6E7FF", "#C6E7FF"], # Progress bar track color
-        "progress_color": ["#B0D4FF", "#B0D4FF"], # Progress bar fill color
+        "fg_color": ["#C6E7FF", "#C6E7FF"],
+        "progress_color": ["#B0D4FF", "#B0D4FF"],
         "border_color": ["#B0D4FF", "#B0D4FF"],
         "border_width": 0,
         "corner_radius": 0,
@@ -77,15 +72,15 @@ custom_theme_dict = {
     "CTkSlider": {
         "fg_color": ["#C6E7FF", "#C6E7FF"],
         "progress_color": ["#B0D4FF", "#B0D4FF"],
-        "button_color": ["#333333", "#333333"], # Slider handle color
+        "button_color": ["#333333", "#333333"],
         "button_hover_color": ["#666666", "#666666"],
         "border_color": ["#B0D4FF", "#B0D4FF"],
         "border_width": 0,
-        "corner_radius": 1000, # Circle shape
+        "corner_radius": 1000,
         "button_corner_radius": 1000,
     },
     "CTkOptionMenu": {
-        "fg_color": ["#F0F0F0", "#F0F0F0"], # Changed to light grey for dropdown background
+        "fg_color": ["#F0F0F0", "#F0F0F0"],
         "button_color": ["#C6E7FF", "#C6E7FF"],
         "button_hover_color": ["#B0D4FF", "#B0D4FF"],
         "text_color": ["#333333", "#333333"],
@@ -95,23 +90,23 @@ custom_theme_dict = {
         "border_color": ["#C6E7FF", "#C6E7FF"],
     },
     "CTkComboBox": {
-        "fg_color": ["white", "white"], # Changed to white for combobox background
-        "button_color": ["#C6E7FF", "#C6E7FF"], # Blue like buttons
-        "button_hover_color": ["#B0D4FF", "#B0D4FF"], # Blue hover like buttons
+        "fg_color": ["white", "white"],
+        "button_color": ["#C6E7FF", "#C6E7FF"],
+        "button_hover_color": ["#B0D4FF", "#B0D4FF"],
         "text_color": ["#333333", "#333333"],
         "text_color_disabled": ["#999999", "#999999"],
         "corner_radius": 5,
-        "border_width": 2,  # Thicker border for combobox
-        "border_color": ["#C6E7FF", "#C6E7FF"], # Blue border for combobox
+        "border_width": 2,
+        "border_color": ["#C6E7FF", "#C6E7FF"],
     },
     "CTkScrollbar": {
-        "fg_color": ["#E0E0E0", "#E0E0E0"], # Changed to light grey for scrollbar track
-        "button_color": ["#999999", "#999999"], # Changed to darker grey for scrollbar thumb
-        "button_hover_color": ["#666666", "#666666"], # Darker grey for hover
-        "corner_radius": 1000, # Rounded ends for scrollbar
+        "fg_color": ["#E0E0E0", "#E0E0E0"],
+        "button_color": ["#999999", "#999999"],
+        "button_hover_color": ["#666666", "#666666"],
+        "corner_radius": 1000,
         "border_width": 0,
         "border_spacing": 0,
-        "width": 3, # Original thin width
+        "width": 3,
     },
     "CTkSwitch": {
         "fg_color": ["#C6E7FF", "#C6E7FF"],
@@ -225,15 +220,35 @@ class InstagramScraperApp:
         self.root = root_window
         self.root.title("Instagram Post Analyzer")
         self.root.geometry("1000x650")
-        self.scraped_data_for_table = []
-        self.logged_in_username = logged_in_username
+        
+        # Set application icon
+        try:
+            icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pastelblack.ico")
+            if os.path.exists(icon_path):
+                self.root.iconbitmap(icon_path)
+                logging.info(f"Application icon set to: {icon_path}")
+            else:
+                logging.warning(f"Icon file not found at: {icon_path}")
+        except Exception as e:
+            logging.error(f"Error setting application icon: {e}", exc_info=True)
+
+
+        self.scraped_data_for_table = [] # Stores data as list of dicts
+        self.manual_login_driver = None  # Initialize to None
+        
+        # Initialize sorting state
+        self.sort_column = None
+        self.sort_reverse = False
+
         self._setup_ui()
         
         # Display initial login status/username
-        if self.logged_in_username:
+        if logged_in_username: # Use the provided logged_in_username from login_sequence
+            self.logged_in_username = logged_in_username
             self._update_username_display(self.logged_in_username)
             self.set_status(f"Ready. Logged in as Instaloader user: {self.logged_in_username}.")
         else:
+            self.logged_in_username = None
             self._update_username_display(None) # Show "Not logged in"
             self.set_status("Ready. Not logged in to Instaloader (anonymous scraping will be limited).")
             
@@ -249,6 +264,14 @@ class InstagramScraperApp:
 
 
     def _on_closing(self):
+        # Quit the persistent manual login driver if it exists
+        if self.manual_login_driver:
+            try:
+                self.manual_login_driver.quit()
+                logging.info("Persistent manual login browser closed on app exit.")
+            except Exception as e:
+                logging.error(f"Error quitting manual login browser on exit: {e}", exc_info=True)
+
         if messagebox.askyesno("Exit", "Are you sure you want to exit?", parent=self.root):
             logging.info("Application exiting by user confirmation.")
             self.root.destroy()
@@ -256,28 +279,64 @@ class InstagramScraperApp:
     def _load_data_from_db_into_ui(self):
         self.set_status("Loading previous records from database...")
         try:
-            rows = load_data_from_db()
+            # Clear in-memory data and treeview before loading from DB
+            self.scraped_data_for_table.clear()
             for item in self.tree.get_children():
                 self.tree.delete(item)
-            self.scraped_data_for_table.clear()
 
-            db_columns = [
-                "link", "post_date", "last_record",
-                "owner", "likes", "comments", "views", "engagement_rate"
+            rows = load_data_from_db()
+            # This db_columns list MUST match the SELECT statement order in database.py's load_data_from_db
+            db_columns_order = [
+                "post_shortcode", "link", "post_date", "last_record",
+                "owner", "likes", "comments", "views", "engagement_rate", "error" 
             ]
 
             for row_tuple in rows:
-                row_dict = {db_columns[j]: val for j, val in enumerate(row_tuple)}
+                row_dict = {}
+                for j, col_name in enumerate(db_columns_order):
+                    if j < len(row_tuple):
+                        row_dict[col_name] = row_tuple[j]
+                    else:
+                        row_dict[col_name] = None 
+                
+                # Format dates to date-only strings
+                # Use str() around row_dict["post_date"] to handle potential non-string types from DB
+                if row_dict.get("post_date") and row_dict["post_date"] != "N/A":
+                    try:
+                        dt_obj = datetime.strptime(str(row_dict["post_date"]).split(" ")[0], "%Y-%m-%d")
+                        row_dict["post_date"] = dt_obj.strftime("%Y-%m-%d")
+                    except (ValueError, TypeError):
+                        logging.warning(f"Failed to parse post_date from DB: {row_dict.get('post_date')}")
+                        row_dict["post_date"] = "N/A" # Set to N/A if cannot parse
+
+                if row_dict.get("last_record") and row_dict["last_record"] != "N/A":
+                    try:
+                        # Ensure last_record is also parsed as date only for display
+                        dt_obj = datetime.strptime(str(row_dict["last_record"]).split(" ")[0], "%Y-%m-%d")
+                        row_dict["last_record"] = dt_obj.strftime("%Y-%m-%d")
+                    except (ValueError, TypeError):
+                        logging.warning(f"Failed to parse last_record from DB: {row_dict.get('last_record')}")
+                        row_dict["last_record"] = "N/A" # Set to N/A if cannot parse
+
+
+                # Explicitly map data to the display columns expected by self.columns
+                # This ensures the order is correct for the Treeview display
                 post_data_gui = {
-                    col: (row_dict.get(col) if row_dict.get(col) is not None else "N/A")
-                    for col in self.columns
+                    "link": row_dict.get("link", "N/A"),
+                    "post_date": row_dict.get("post_date", "N/A"),
+                    "last_record": row_dict.get("last_record", "N/A"),
+                    "owner": row_dict.get("owner", "N/A"),
+                    "likes": row_dict.get("likes", "N/A"),
+                    "comments": row_dict.get("comments", "N/A"),
+                    "views": row_dict.get("views", "N/A"),
+                    "engagement_rate": row_dict.get("engagement_rate", "N/A"),
+                    "error": row_dict.get("error", None), # Load error status
+                    "post_shortcode": row_dict.get("post_shortcode", get_shortcode_from_url(row_dict.get("link", ""))) # Load shortcode
                 }
-                # Check if the loaded data has an error and apply the tag
-                if "error" in post_data_gui and post_data_gui["error"] != "N/A":
-                    self._add_to_table(post_data_gui, from_db=True, tag="failed")
-                else:
-                    self._add_to_table(post_data_gui, from_db=True)
-                self.scraped_data_for_table.append(post_data_gui) # Append after adding to table
+                
+                self.scraped_data_for_table.append(post_data_gui)
+            
+            self._refresh_table_display()
 
             self.set_status(f"{len(rows)} records loaded. Ready.")
             logging.info(f"{len(rows)} records loaded from database.")
@@ -294,38 +353,30 @@ class InstagramScraperApp:
                 logging.error(f"Error loading data from database: {e}", exc_info=True)
 
     def _setup_ui(self):
-        # The permanent status bar is removed. Status updates will now use temporary overlays.
-
-        # Main frame that holds the table + input controls
         main_frame = ctk.CTkFrame(self.root, fg_color="transparent") 
         main_frame.pack(expand=True, fill=tk.BOTH, padx=10, pady=10) 
 
-        # --- Username Display (Top Right) ---
         self.username_label = ctk.CTkLabel(
             main_frame, text="", font=ctk.CTkFont(size=12, weight="bold"), text_color="#333333"
         )
         self.username_label.pack(side=tk.TOP, anchor=tk.NE, padx=5, pady=5)
 
-
-        # Table frame. Will use grid for Treeview and Scrollbar inside.
         table_frame = ctk.CTkFrame(main_frame, fg_color="transparent") 
         table_frame.pack(expand=True, fill=tk.BOTH, padx=5, pady=5)
         
-        # Configure grid for table_frame to hold Treeview and Scrollbar
         table_frame.grid_rowconfigure(0, weight=1)
         table_frame.grid_columnconfigure(0, weight=1)
-        table_frame.grid_columnconfigure(1, weight=0) # For scrollbar
+        table_frame.grid_columnconfigure(1, weight=0)
 
 
         self.columns = (
             "link", "post_date", "last_record",
             "owner", "likes", "comments", "views", "engagement_rate"
         )
-        self.tree = ttk.Treeview( # ttk.Treeview is still used directly
+        self.tree = ttk.Treeview(
             table_frame, columns=self.columns, show="headings", selectmode="extended" 
         )
 
-        # Configure Treeview styling to blend with CustomTkinter's custom theme
         tree_style = ttk.Style()
         tree_style.theme_use('clam')
         tree_style.configure("Treeview",
@@ -338,10 +389,9 @@ class InstagramScraperApp:
             darkcolor="#E0E0E0",
             rowheight=25
         )
-        # Updated selected background and foreground colors based on the image
         tree_style.map("Treeview",
-            background=[('selected', "#87aec9")],  # Blue from your image
-            foreground=[('selected', "white")]  # White text when selected
+            background=[('selected', "#87aec9")],
+            foreground=[('selected', "white")]
         )
         tree_style.configure("Treeview.Heading",
             background="#C6E7FF",
@@ -350,8 +400,7 @@ class InstagramScraperApp:
             relief="flat",
             padding=(5, 5)
         )
-        # Define the style for 'failed' rows
-        self.tree.tag_configure("failed", background="#FFCCCC", foreground="black") # Light red background for failed rows
+        self.tree.tag_configure("failed", background="#FFCCCC", foreground="black")
 
         col_widths = {
             "link": 250, "post_date": 120, "last_record": 150,
@@ -362,67 +411,58 @@ class InstagramScraperApp:
         }
         for col in self.columns:
             heading_text = col.replace("_", " ").title()
-            self.tree.heading(col, text=heading_text)
+            self.tree.heading(col, text=heading_text, command=lambda c=col: self._sort_treeview(c))
             self.tree.column(col, width=col_widths.get(col, 100), anchor=col_align.get(col, tk.W), minwidth=50)
 
-        # Place Treeview using grid, allowing it to expand
         self.tree.grid(row=0, column=0, sticky="nsew")
 
-        # CustomTkinter Scrollbar for the Treeview, placed in the same table_frame
-        # Make scrollbar thinner by changing width to 8
-        vsb = ctk.CTkScrollbar(table_frame, command=self.tree.yview, orientation="vertical", width=8) # Width set to 8
+        vsb = ctk.CTkScrollbar(table_frame, command=self.tree.yview, orientation="vertical", width=8)
         vsb.grid(row=0, column=1, sticky="ns") 
-        self.tree.configure(yscrollcommand=vsb.set) # Link treeview to scrollbar
+        self.tree.configure(yscrollcommand=vsb.set)
 
-        # Input controls and buttons frame (positioned below the table)
         input_frame = ctk.CTkFrame(main_frame, fg_color="transparent") 
         input_frame.pack(fill=tk.X, side=tk.BOTTOM, padx=5, pady=5) 
 
-        # --- Layout changes for URL and Record button (top row) ---
         url_record_frame = ctk.CTkFrame(input_frame, fg_color="transparent")
-        url_record_frame.pack(fill=tk.X, pady=(0, 5)) # Pack at the top of input_frame
+        url_record_frame.pack(fill=tk.X, pady=(0, 5))
         
         ctk.CTkLabel(url_record_frame, text="Instagram Post URL:").pack(side=tk.LEFT, padx=(0, 5)) 
         self.url_entry = ctk.CTkEntry(url_record_frame, width=60) 
         self.url_entry.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
 
         self.scrape_button = ctk.CTkButton( 
-            url_record_frame, text="Record", command=self.on_record_button_press # Renamed
+            url_record_frame, text="Record", command=self.on_record_button_press
         )
         self.scrape_button.pack(side=tk.LEFT, padx=5)
 
-        # --- Other buttons (bottom row) ---
         other_buttons_frame = ctk.CTkFrame(input_frame, fg_color="transparent")
-        other_buttons_frame.pack(fill=tk.X, pady=(5, 0)) # Pack below url_record_frame
+        other_buttons_frame.pack(fill=tk.X, pady=(5, 0))
         
         self.batch_scrape_button = ctk.CTkButton( 
-            other_buttons_frame, text="Import CSV", command=self.on_batch_scrape_button_press # Renamed
+            other_buttons_frame, text="Import CSV", command=self.on_batch_scrape_button_press
         )
         self.batch_scrape_button.pack(side=tk.LEFT, padx=5)
 
         self.update_selected_button = ctk.CTkButton(
-            other_buttons_frame, text="Update Data", command=self.on_update_selected # Renamed
+            other_buttons_frame, text="Update Data", command=self.on_update_selected
         )
         self.update_selected_button.pack(side=tk.LEFT, padx=5)
 
         self.delete_selected_button = ctk.CTkButton(
-            other_buttons_frame, text="Delete", command=self.on_delete_selected # Renamed to "Delete"
+            other_buttons_frame, text="Delete", command=self.on_delete_selected
         )
         self.delete_selected_button.pack(side=tk.LEFT, padx=5)
 
         self.export_button = ctk.CTkButton( 
-            other_buttons_frame, text="Export CSV", command=self.export_to_csv # Renamed
+            other_buttons_frame, text="Export CSV", command=self.export_to_csv
         )
         self.export_button.pack(side=tk.LEFT, padx=5)
 
-        # NEW: Logout Instaloader Button
         self.logout_instaloader_button = ctk.CTkButton(
             other_buttons_frame, text="Logout Instaloader", command=self.on_logout_instaloader
         )
         self.logout_instaloader_button.pack(side=tk.LEFT, padx=5)
 
-
-        # Bind right-click for context menu
         self.tree.bind("<Button-3>", self._show_context_menu)
 
 
@@ -437,7 +477,7 @@ class InstagramScraperApp:
         """
         Updates the status using a temporary, non-blocking overlay notification.
         """
-        logging.info(f"STATUS_UPDATE: {message}") # Still log to console
+        logging.info(f"STATUS_UPDATE: {message}")
         self.root.after(0, lambda: self._show_temp_notification(message))
 
     def set_status_from_thread(self, message):
@@ -450,7 +490,6 @@ class InstagramScraperApp:
         """
         Displays a temporary, non-blocking notification label in the center top.
         """
-        # Clear any existing temporary notification
         if self._temp_notification_label:
             self._temp_notification_label.destroy()
             if self._temp_notification_after_id:
@@ -461,14 +500,12 @@ class InstagramScraperApp:
             text=message,
             font=ctk.CTkFont(size=14, weight="bold"),
             text_color="white",
-            fg_color="#333333", # Dark background for visibility
+            fg_color="#333333",
             corner_radius=5,
             padx=15, pady=10
         )
-        # Place it at the top center
         self._temp_notification_label.place(relx=0.5, rely=0.05, anchor="n")
         
-        # Schedule its destruction after a duration
         self._temp_notification_after_id = self.root.after(duration_ms, self._hide_temp_notification)
 
     def _hide_temp_notification(self):
@@ -483,7 +520,7 @@ class InstagramScraperApp:
         """
         Displays a blocking overlay for long-running operations.
         """
-        if self.overlay: # Check if overlay already exists
+        if self.overlay:
             return
 
         self.overlay = ctk.CTkFrame(self.root, fg_color=("gray80", "gray20"), bg_color=("gray80", "gray20"), corner_radius=0)
@@ -496,7 +533,7 @@ class InstagramScraperApp:
         ctk.CTkLabel(container, text=text, font=ctk.CTkFont(size=16, weight="bold"), text_color="#333333").pack(pady=(0, 10))
         ctk.CTkLabel(container, text="Please wait...", font=ctk.CTkFont(size=14), text_color="#666666").pack()
         
-        self.root.update_idletasks() # Force UI update
+        self.root.update_idletasks()
 
     def _hide_blocking_overlay(self):
         """Hides the blocking overlay."""
@@ -507,11 +544,11 @@ class InstagramScraperApp:
     def on_record_button_press(self):
         post_url = self.url_entry.get().strip()
         if not post_url:
-            self.set_status("Input Error: Please enter an Instagram Post URL.") # Uses temporary notification
+            self.set_status("Input Error: Please enter an Instagram Post URL.")
             return
 
         self._set_buttons_state(tk.DISABLED) 
-        self._show_blocking_overlay("Recording Single Post...") # Show blocking overlay for this operation
+        self._show_blocking_overlay("Recording Single Post...")
         logging.info(f"Record button pressed for URL: {post_url}")
 
         thread = threading.Thread(
@@ -522,7 +559,7 @@ class InstagramScraperApp:
 
     def on_batch_scrape_button_press(self):
         if self.is_batch_scraping:
-            self.set_status("Batch scraping already in progress.") # Uses temporary notification
+            self.set_status("Batch scraping already in progress.")
             return
 
         filepath = filedialog.askopenfilename(
@@ -530,12 +567,12 @@ class InstagramScraperApp:
             title="Select CSV file with Instagram URLs"
         )
         if not filepath:
-            self.set_status("Batch scrape cancelled. No CSV file selected.") # Uses temporary notification
+            self.set_status("Batch scrape cancelled. No CSV file selected.")
             return
 
         self.is_batch_scraping = True
         self._set_buttons_state(tk.DISABLED) 
-        self._show_blocking_overlay(f"Starting Batch Scrape from CSV...") # Show blocking overlay
+        self._show_blocking_overlay(f"Starting Batch Scrape from CSV...")
         logging.info(f"Batch scrape initiated from CSV: {filepath}")
 
         thread = threading.Thread(
@@ -547,30 +584,31 @@ class InstagramScraperApp:
     def on_update_selected(self):
         selections = list(self.tree.selection())
         if not selections:
-            self.set_status("Selection Error: Select one or more items to update.") # Uses temporary notification
+            self.set_status("Selection Error: Select one or more items to update.")
             return
 
         links_to_update = []
         for sel in selections:
             try:
-                values = self.tree.item(sel).get("values", [])
-                if len(values) >= 1: 
-                    links_to_update.append(values[0]) 
+                # Retrieve the full data dictionary for the selected item
+                item_data = self._get_item_data_from_tree_selection(sel)
+                if item_data and "link" in item_data:
+                    links_to_update.append(item_data["link"])
             except Exception as ex:
                 logging.error(f"Error retrieving tree item for update: {ex}", exc_info=True)
                 self.set_status(f"Error preparing update: {ex}")
 
         if not links_to_update:
-            self.set_status("Update Warning: No valid items selected for update.") # Uses temporary notification
+            self.set_status("Update Warning: No valid items selected for update.")
             return
 
         self.is_batch_scraping = True 
         self._set_buttons_state(tk.DISABLED)
-        self._show_blocking_overlay(f"Updating {len(links_to_update)} Selected Posts...") # Show blocking overlay
+        self._show_blocking_overlay(f"Updating {len(links_to_update)} Selected Posts...")
         logging.info(f"Update selected initiated for {len(links_to_update)} posts.")
 
         thread = threading.Thread(
-            target=self._run_batch_scrape_in_thread, args=(None, links_to_update) 
+            target=self._run_batch_scrape_in_thread, args=(None, links_to_update)
         )
         thread.daemon = True
         thread.start()
@@ -585,9 +623,9 @@ class InstagramScraperApp:
         links_to_delete = []
         for sel in selections:
             try:
-                values = self.tree.item(sel).get("values", [])
-                if len(values) >= 1:
-                    links_to_delete.append(values[0]) # Assuming link is the first column
+                item_data = self._get_item_data_from_tree_selection(sel)
+                if item_data and "link" in item_data:
+                    links_to_delete.append(item_data["link"])
             except Exception as ex:
                 logging.error(f"Error retrieving tree item for deletion: {ex}", exc_info=True)
                 self.set_status(f"Error preparing deletion: {ex}")
@@ -599,22 +637,44 @@ class InstagramScraperApp:
         self.set_status(f"Deleting {len(links_to_delete)} selected posts...")
         logging.info(f"Deletion initiated for {len(links_to_delete)} posts.")
 
-        # Perform deletion in a separate thread to keep UI responsive
         def delete_task():
             try:
                 for link in links_to_delete:
+                    # Remove from in-memory list first
+                    self.scraped_data_for_table = [item for item in self.scraped_data_for_table if item.get("link") != link]
                     delete_data_from_db(link) # Call the database function to delete
-                self.root.after(0, self._load_data_from_db_into_ui) # Refresh UI after deletion
+                self.root.after(0, self._refresh_table_display) # Refresh UI from updated in-memory list
                 self.root.after(0, lambda: self.set_status(f"Deleted {len(links_to_delete)} items. Table refreshed."))
                 logging.info(f"Successfully deleted {len(links_to_delete)} items.")
             except Exception as e:
                 self.root.after(0, lambda: self.set_status(f"Error during deletion: {e}"))
                 logging.error(f"Error during deletion: {e}", exc_info=True)
             finally:
-                self.root.after(0, self._set_buttons_state, tk.NORMAL) # Ensure buttons are re-enabled
+                self.root.after(0, self._set_buttons_state, tk.NORMAL)
         
         self._set_buttons_state(tk.DISABLED)
         threading.Thread(target=delete_task, daemon=True).start()
+    
+    def _get_item_data_from_tree_selection(self, item_id):
+        """Helper to get the full dictionary for a selected treeview item."""
+        # Get the values from the treeview row
+        values = self.tree.item(item_id, 'values')
+        if not values:
+            return None
+        
+        # Map the values back to a dictionary based on self.columns order
+        # This mapping is sufficient to find the corresponding full data_entry
+        item_dict_from_display = {self.columns[i]: values[i] for i in range(len(self.columns))}
+        
+        # Now, find the full data entry in self.scraped_data_for_table using the link
+        link_from_tree = item_dict_from_display.get("link")
+        if link_from_tree:
+            for data_entry in self.scraped_data_for_table:
+                # Use get_shortcode_from_url for robust comparison
+                if get_shortcode_from_url(data_entry.get("link", "")) == get_shortcode_from_url(link_from_tree):
+                    return data_entry
+        return None
+
 
     def on_logout_instaloader(self):
         """Logs out from Instaloader by deleting the session file."""
@@ -637,21 +697,21 @@ class InstagramScraperApp:
             else:
                 logging.warning(f"Instaloader session file not found for deletion: {session_filepath}")
             
-            global L # Access the global Instaloader instance
-            L = instaloader.Instaloader() # Re-initialize Instaloader to a fresh, unauthenticated state
+            global L
+            L = instaloader.Instaloader()
             logging.info("Instaloader instance reset to unauthenticated state.")
 
-            self.logged_in_username = None # Clear the stored username
-            self._update_username_display(None) # Update display to "Not logged in"
+            self.logged_in_username = None
+            self._update_username_display(None)
             self.set_status("Successfully logged out from Instaloader. Closing application.")
             messagebox.showinfo("Logout Successful", "Successfully logged out from Instaloader.", parent=self.root)
-            self.root.destroy() # Close the app after successful logout
+            self.root.destroy()
         except Exception as e:
             self.set_status(f"Error during Instaloader logout: {e}")
             logging.error(f"Error logging out Instaloader user: {e}", exc_info=True)
             messagebox.showerror("Logout Error", f"Failed to log out from Instaloader: {e}", parent=self.root)
         finally:
-            self._set_buttons_state(tk.NORMAL) # Re-enable buttons if logout failed without closing app
+            self._set_buttons_state(tk.NORMAL)
 
 
     def _run_batch_scrape_in_thread(self, filepath=None, urls_to_scrape_list=None):
@@ -676,20 +736,20 @@ class InstagramScraperApp:
                 logging.error(f"CSV file not found: {filepath}", exc_info=True)
                 self.is_batch_scraping = False
                 self._set_buttons_state(tk.NORMAL)
-                self._hide_blocking_overlay() # Hide overlay on error
+                self._hide_blocking_overlay()
                 return
             except Exception as e:
                 self.set_status_from_thread(f"Error reading CSV file: {e}")
                 logging.error(f"Error reading CSV from {filepath}: {e}", exc_info=True)
                 self.is_batch_scraping = False
                 self._set_buttons_state(tk.NORMAL)
-                self._hide_blocking_overlay() # Hide overlay on error
+                self._hide_blocking_overlay()
                 return
         else:
             self.set_status_from_thread("Error: No URLs provided for batch scrape.")
             self.is_batch_scraping = False
             self._set_buttons_state(tk.NORMAL)
-            self._hide_blocking_overlay() # Hide overlay on error
+            self._hide_blocking_overlay()
             return
 
 
@@ -697,7 +757,7 @@ class InstagramScraperApp:
             self.set_status_from_thread(f"No URLs found to scrape from {source_desc}.")
             self.is_batch_scraping = False
             self._set_buttons_state(tk.NORMAL)
-            self._hide_blocking_overlay() # Hide overlay if no URLs
+            self._hide_blocking_overlay()
             return
 
         self.set_status_from_thread(f"Starting batch scrape from {source_desc}. Found {len(urls_to_scrape)} URLs...")
@@ -716,7 +776,7 @@ class InstagramScraperApp:
         logging.info("Batch scrape successfully completed.")
         self.is_batch_scraping = False
         self._set_buttons_state(tk.NORMAL)
-        self._hide_blocking_overlay() # Hide blocking overlay after batch complete
+        self._hide_blocking_overlay()
 
 
     def _run_instaloader_scrape_in_thread(self, post_url, logged_in_username, is_batch=True):
@@ -730,73 +790,111 @@ class InstagramScraperApp:
             logging.error(f"Error in single scrape thread execution for {post_url}: {e}", exc_info=True)
             scraped_data_dict = {"error": str(e), "url": post_url}
         finally:
-            # This ensures buttons are re-enabled and overlay is hidden regardless of success or failure
-            # for single scrape operations. For batch, it's handled in the batch loop.
             if not is_batch: 
                 self.root.after(
                     0, lambda data=scraped_data_dict: self._handle_instaloader_scrape_result(data, post_url)
                 )
-                self.root.after(0, self._set_buttons_state, tk.NORMAL) # Re-enable buttons for single scrape
-                self.root.after(0, self._hide_blocking_overlay) # Hide blocking overlay for single scrape
+                self.root.after(0, self._set_buttons_state, tk.NORMAL)
+                self.root.after(0, self._hide_blocking_overlay)
             if loop and not loop.is_closed():
                 loop.close()
 
     def _handle_instaloader_scrape_result(self, scraped_data_dict, post_url):
         shortcode = get_shortcode_from_url(post_url) or "unknown_post"
-        current_timestamp_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        # Changed to datetime.now() for local system time (Medan, UTC+7)
+        current_timestamp_str = datetime.now().strftime("%Y-%m-%d") 
 
         has_error = scraped_data_dict.get("error") is not None and scraped_data_dict.get("error") != ""
 
         if has_error:
             error_message = scraped_data_dict.get("error", "Unknown error")
-            self.set_status(f"Scrape: Failed for {shortcode} - {error_message}") # Uses temporary notification
+            self.set_status(f"Scrape: Failed for {shortcode} - {error_message}")
             logging.error(f"Handling scrape failure for {shortcode}: {error_message}")
         else:
-            self.set_status(f"Scrape: Data for {shortcode} recorded successfully.") # Uses temporary notification
+            self.set_status(f"Scrape: Data for {shortcode} recorded successfully.")
             logging.info(f"Scrape: Data for {shortcode} successfully handled and recorded.")
+            self.url_entry.delete(0, tk.END) # Clear input on successful scrape
 
+
+        formatted_post_date = "N/A"
+        if scraped_data_dict.get("post_date") and scraped_data_dict["post_date"] != "N/A":
+            try:
+                dt_obj = datetime.strptime(str(scraped_data_dict["post_date"]).split(" ")[0], "%Y-%m-%d")
+                formatted_post_date = dt_obj.strftime("%Y-%m-%d")
+            except (ValueError, TypeError):
+                formatted_post_date = scraped_data_dict["post_date"]
+
+        # Prepare GUI data dictionary with all expected fields, including error status
         gui_data = {
             "link": scraped_data_dict.get("link", post_url),
-            "post_date": scraped_data_dict.get("post_date", "N/A"),
-            "last_record": current_timestamp_str,
+            "post_date": formatted_post_date,
+            "last_record": current_timestamp_str, # This will always be today's date based on system time
             "owner": scraped_data_dict.get("owner", "N/A"),
             "likes": scraped_data_dict.get("likes", "N/A"),
             "comments": scraped_data_dict.get("comments", "N/A"),
             "views": scraped_data_dict.get("views", "N/A"),
-            "engagement_rate": scraped_data_dict.get("engagement_rate", "N/A")
+            "engagement_rate": scraped_data_dict.get("engagement_rate", "N/A"),
+            "error": scraped_data_dict.get("error", None), # Keep error status
+            "post_shortcode": shortcode # Add shortcode for internal tracking
         }
-        self.scraped_data_for_table.append(gui_data)
-        
-        # Pass a tag if there was an error for visual indication
-        if has_error:
-            self._add_to_table(gui_data, tag="failed")
+
+        existing_index = -1
+        for i, item in enumerate(self.scraped_data_for_table):
+            if item.get("post_shortcode") == shortcode:
+                existing_index = i
+                break
+
+        if existing_index != -1:
+            # Update only the fields that are expected to change with new scrapes
+            self.scraped_data_for_table[existing_index].update({
+                "link": gui_data["link"], # Link might change slightly in canonical form, but shortcode is key
+                "post_date": gui_data["post_date"], # Update post_date in case it was N/A before
+                "last_record": gui_data["last_record"],
+                "owner": gui_data["owner"],
+                "likes": gui_data["likes"],
+                "comments": gui_data["comments"],
+                "views": gui_data["views"],
+                "engagement_rate": gui_data["engagement_rate"],
+                "error": gui_data["error"]
+            })
+            logging.info(f"Updated existing record for {shortcode} in in-memory table.")
         else:
-            self._add_to_table(gui_data)
-        
+            self.scraped_data_for_table.append(gui_data)
+            logging.info(f"Added new record for {shortcode} to in-memory table.")
+
         save_to_database(gui_data, shortcode)
-
-        # Button state is now managed by the calling thread's finally block, not here.
-
+        
+        self.root.after(0, self._refresh_table_display)
 
     def _set_buttons_state(self, state):
-        # Use .configure() for CustomTkinter widgets
         self.scrape_button.configure(state=state)
         self.batch_scrape_button.configure(state=state)
         self.update_selected_button.configure(state=state)
         self.delete_selected_button.configure(state=state)
         self.export_button.configure(state=state)
-        self.logout_instaloader_button.configure(state=state) # Configure logout button state
+        self.logout_instaloader_button.configure(state=state)
 
-    def _add_to_table(self, post_data, from_db=False, tag=None): # Added 'tag' parameter
-        values = [post_data.get(col, "N/A") for col in self.columns]
-        # Insert item with a tag if provided
-        if tag:
-            item_id = self.tree.insert("", tk.END, values=values, tags=(tag,))
-        else:
-            item_id = self.tree.insert("", tk.END, values=values)
+    def _refresh_table_display(self):
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+        
+        for post_data in self.scraped_data_for_table:
+            # Ensure the order of values matches self.columns for display
+            values = []
+            for col in self.columns:
+                value = post_data.get(col, "N/A")
+                if col == "engagement_rate" and isinstance(value, (int, float)) and value != "N/A":
+                    values.append(f"{value:.2f}%") # Format as percentage with 2 decimal places
+                elif col == "engagement_rate" and value == "N/A":
+                    values.append("N/A") # Keep "N/A" as is
+                else:
+                    values.append(value)
 
-        if not from_db:
-            self.tree.see(item_id)
+            tag = "failed" if (post_data.get("error") is not None and post_data.get("error") != "") else ""
+            self.tree.insert("", tk.END, values=values, tags=(tag,) if tag else ())
+        
+        self.set_status("Table display refreshed.")
+
 
     def export_to_csv(self):
         if not self.scraped_data_for_table:
@@ -814,7 +912,14 @@ class InstagramScraperApp:
                 writer = csv.DictWriter(csvfile, fieldnames=self.columns)
                 writer.writeheader()
                 for row_data_dict in self.scraped_data_for_table:
-                    writer.writerow({col: row_data_dict.get(col, "N/A") for col in self.columns})
+                    export_data = {}
+                    for k, v in row_data_dict.items():
+                        if k in self.columns: # Only export columns defined in self.columns
+                            if k == "engagement_rate" and isinstance(v, (int, float)) and v != "N/A":
+                                export_data[k] = f"{v:.2f}%" # Export as percentage
+                            else:
+                                export_data[k] = v
+                    writer.writerow(export_data)
             self.set_status(f"Data exported to CSV: {filepath}")
             messagebox.showinfo("Export Successful", f"Data successfully exported to\n{filepath}", parent=self.root)
             logging.info(f"Data exported to CSV: {filepath}")
@@ -837,66 +942,105 @@ class InstagramScraperApp:
         for item in self.tree.get_children():
             self.tree.selection_add(item)
 
+    def _sort_treeview(self, col):
+        if self.sort_column == col:
+            self.sort_reverse = not self.sort_reverse
+        else:
+            self.sort_column = col
+            self.sort_reverse = False
 
-def login_sequence(root):
+        def _get_sort_value(item, col_name):
+            value = item.get(col_name)
+            if value is None or value == "N/A": # Handle None and "N/A"
+                if col_name in ["likes", "comments", "views", "engagement_rate"]:
+                    return float('-inf') if not self.sort_reverse else float('inf') 
+                elif col_name in ["post_date", "last_record"]:
+                    # For dates, use a very early/late date for N/A or None
+                    return datetime.min.replace(tzinfo=timezone.utc) if not self.sort_reverse else datetime.max.replace(tzinfo=timezone.utc)
+                return "" # For other string columns
+            
+            if col_name in ["likes", "comments", "views"]:
+                try:
+                    return int(value)
+                except (ValueError, TypeError):
+                    return float('-inf') if not self.sort_reverse else float('inf') # Fallback if conversion fails
+            if col_name == "engagement_rate":
+                try:
+                    # Parse numerical value correctly for sorting, ignoring '%'
+                    if isinstance(value, str) and value.endswith('%'):
+                        return float(value.strip('%'))
+                    return float(value)
+                except (ValueError, TypeError):
+                    return float('-inf') if not self.sort_reverse else float('inf') # Fallback if conversion fails
+            if col_name in ["post_date", "last_record"]:
+                try:
+                    return datetime.strptime(str(value), "%Y-%m-%d").replace(tzinfo=timezone.utc) # Parse and make timezone-aware
+                except (ValueError, TypeError):
+                    return datetime.min.replace(tzinfo=timezone.utc) if not self.sort_reverse else datetime.max.replace(tzinfo=timezone.utc) # Fallback
+            return value
+
+        self.scraped_data_for_table.sort(key=lambda item: _get_sort_value(item, col), reverse=self.sort_reverse)
+        
+        self._refresh_table_display()
+
+        for c in self.columns:
+            if c == col:
+                arrow = " ↓" if self.sort_reverse else " ↑"
+                self.tree.heading(c, text=c.replace("_", " ").title() + arrow)
+            else:
+                self.tree.heading(c, text=c.replace("_", " ").title())
+
+
+def login_sequence(root, app_instance_ref):
     logged_in_instaloader_username = None
     instaloader_login_successful = False
 
-    # --- Step 0: Check if ChromeDriver and Chrome binary locations are specified/found ---
-    # This check is crucial to prevent launching an unintended Chrome browser
     if not os.path.exists(CHROMEDRIVER_EXECUTABLE_PATH):
         messagebox.showerror("Configuration Error", 
                              f"ChromeDriver executable NOT FOUND at expected path: {CHROMEDRIVER_EXECUTABLE_PATH}\n\nPlease ensure chromedriver.exe is at the correct path and matches your Chrome version.", 
                              parent=root)
-        return None # Critical error, cannot proceed without ChromeDriver
+        return None
 
     if not CHROME_BINARY_LOCATION:
         messagebox.showerror("Configuration Error", 
                              "Chrome binary location (chrome.exe) is not set or found. Please ensure Chrome is installed and CHROME_BINARY_LOCATION is correctly configured in scraper.py to point to your specific Chrome executable (e.g., in 'chrome-win64' folder).", 
                              parent=root)
-        return None # Critical error, cannot proceed without Chrome binary
+        return None
 
-    # --- Step 1: Open Selenium browser automatically at startup for login/session management ---
-    logging.info(f"Attempting headless Selenium browser for initial Instagram login/session management. Using binary: {CHROME_BINARY_LOCATION}")
+    logging.info(f"Attempting Selenium browser for initial Instagram login/session management. Using binary: {CHROME_BINARY_LOCATION}")
     
     service = Service(executable_path=CHROMEDRIVER_EXECUTABLE_PATH)
     
-    # Configure options for HEADLESS browser
-    headless_options = Options()
-    headless_options.headless = True # Set to True for headless operation
-    headless_options.add_argument("--window-size=1920,1080")
-    headless_options.add_argument(f"user-data-dir={BROWSER_USER_DATA_DIR}") # Ensure persistent profile
-    headless_options.add_argument("--no-sandbox")
-    headless_options.add_argument("--disable-dev-shm-usage")
-    headless_options.add_argument("--log-level=3")
-    headless_options.add_argument("--disable-gpu") # Added: disable GPU acceleration for headless
-    headless_options.add_argument("--hide-scrollbars") # Added: hide scrollbars
-    headless_options.add_argument("--mute-audio") # Added: mute audio
-    headless_options.binary_location = CHROME_BINARY_LOCATION # Forces the specific Chrome binary
+    headed_options = Options()
+    headed_options.headless = False # Set to False for VISIBLE operation
+    headed_options.add_argument("--window-size=1000,800")
+    headed_options.add_argument(f"user-data-dir={BROWSER_USER_DATA_DIR}")
+    headed_options.add_experimental_option("detach", True) # Keep browser open even if script crashes
+    headed_options.binary_location = CHROME_BINARY_LOCATION
     
     challenge_driver = None
     try:
-        challenge_driver = webdriver.Chrome(service=service, options=headless_options)
+        challenge_driver = webdriver.Chrome(service=service, options=headed_options)
         challenge_driver.set_page_load_timeout(60)
-        challenge_driver.get("https://www.instagram.com/") # Navigate to Instagram home/login
+        challenge_driver.get("https://www.instagram.com/")
         
-        # Removed messagebox.showinfo about browser opening, as it's now headless.
-        logging.info("Headless browser initiated for session management. Attempting to manage session automatically.")
+        if app_instance_ref:
+            app_instance_ref.manual_login_driver = challenge_driver
+            logging.info("Visible login browser instance stored for manual interaction.")
         
-        # Give some time for headless browser to potentially resolve session/redirect
-        time.sleep(5) 
+        messagebox.showinfo("Instagram Login / Session Management",
+                            "A Chrome browser window has opened for Instagram login.\n\n"
+                            "Please log in manually in this browser or resolve any security challenges (e.g., 2FA, CAPTCHA).\n\n"
+                            "**This browser will remain open for your interaction and will close only when you exit the main application.**",
+                            parent=root)
         
     except WebDriverException as e:
-        logging.error(f"Failed to open HEADLESS browser for initial Instagram login. This may indicate an issue with ChromeDriver or Chrome installation/version mismatch or path: {e}", exc_info=True)
+        logging.error(f"Failed to open VISIBLE browser for initial Instagram login. This may indicate an issue with ChromeDriver or Chrome installation/version mismatch or path: {e}", exc_info=True)
         messagebox.showerror("Browser Error", f"Could not open controlled Chrome browser for Instagram login. Please ensure chromedriver.exe and Chrome browser are correctly installed and matching versions, and CHROMEDRIVER_EXECUTABLE_PATH/CHROME_BINARY_LOCATION are set correctly in scraper.py. Error: {e}", parent=root)
-        return None # Critical error, cannot proceed with login
+        return None
 
-    # Removed the finally block with challenge_driver.quit()
-    # The driver will now persist until the Python process ends or it's manually quit.
-    # We will store the driver instance for potential later use or explicit quitting.
 
-    # --- Step 2: After headless browser interaction, attempt to load Instaloader session ---
-    logging.info("Attempting to auto-load Instaloader session after headless browser interaction...")
+    logging.info("Attempting to auto-load Instaloader session after potential manual browser interaction...")
     session_files = [f for f in os.listdir(USER_DATA_DIR) if os.path.isfile(os.path.join(USER_DATA_DIR, f))]
     session_files.sort(key=lambda f: os.path.getmtime(os.path.join(USER_DATA_DIR, f)), reverse=True)
 
@@ -933,9 +1077,8 @@ def login_sequence(root):
         except Exception as e:
             logging.error(f"Error loading Instaloader session from {session_filepath}: {e}", exc_info=True)
 
-    # --- Step 3: If Instaloader session still not found/valid, fall back to Instaloader credential dialog ---
     if not instaloader_login_successful:
-        logging.info("Instaloader session still not found/valid after headless browser interaction. Prompting for Instaloader credentials.")
+        logging.info("Instaloader session still not found/valid after manual browser interaction. Prompting for Instaloader credentials.")
         
         while not instaloader_login_successful:
             dialog = tk.Toplevel(root) 
