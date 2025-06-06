@@ -48,29 +48,24 @@ CHROME_BINARY_LOCATION = os.path.join(SCRIPT_DIR, "chrome-win64", "chrome.exe")
 # Function to get Chrome and ChromeDriver versions for debugging and setting CHROME_BINARY_LOCATION
 def get_browser_and_driver_versions():
     global CHROME_BINARY_LOCATION, CHROMEDRIVER_EXECUTABLE_PATH
-    chrome_version = "N/A"
-    driver_version = "N/A"
-
-    logging.info(f"Checking for Chrome binary at explicitly set path: {CHROME_BINARY_LOCATION}")
+    
+    logging.info(f"Using explicitly set Chrome binary path: {CHROME_BINARY_LOCATION}")
     if os.path.exists(CHROME_BINARY_LOCATION):
-        try:
-            result = subprocess.run([CHROME_BINARY_LOCATION, "--version"], capture_output=True, text=True, check=True)
-            match = re.search(r'Chrome/([\d.]+)', result.stdout)
-            if match:
-                chrome_version = match.group(1)
-            logging.info(f"Found Chrome binary at: {CHROME_BINARY_LOCATION} (Version: {chrome_version})")
-        except Exception as e:
-            logging.error(f"Could not get Chrome version from {CHROME_BINARY_LOCATION}: {e}", exc_info=True)
+        # Removed direct execution of chrome.exe for version check to prevent accidental visible windows.
+        # The true check for Chrome usability will happen when Selenium initializes the driver.
+        logging.info(f"Chrome binary confirmed to exist at: {CHROME_BINARY_LOCATION}")
     else:
         logging.error(f"Portable Chrome binary NOT FOUND at expected path: {CHROME_BINARY_LOCATION}")
-        logging.error("Please ensure your portable Chrome is correctly located.")
+        logging.error("Please ensure your portable Chrome is correctly located. Cannot guarantee Selenium operation.")
 
-    # Get ChromeDriver version
+    # Get ChromeDriver version (this is generally safe and necessary for version mismatch warnings)
+    driver_version = "N/A"
     logging.info(f"Checking for chromedriver.exe at explicitly set path: {CHROMEDRIVER_EXECUTABLE_PATH}")
     if not os.path.exists(CHROMEDRIVER_EXECUTABLE_PATH):
         logging.error(f"ChromeDriver executable NOT FOUND at {CHROMEDRIVER_EXECUTABLE_PATH}")
     else:
         try:
+            # This subprocess call for chromedriver --version is typically silent.
             result = subprocess.run([CHROMEDRIVER_EXECUTABLE_PATH, "--version"], capture_output=True, text=True, check=True)
             match = re.search(r'ChromeDriver ([\d.]+)', result.stdout)
             if match:
@@ -79,17 +74,14 @@ def get_browser_and_driver_versions():
         except Exception as e:
             logging.error(f"Could not get ChromeDriver version from {CHROMEDRIVER_EXECUTABLE_PATH}: {e}", exc_info=True)
     
-    logging.info(f"Summary: Detected Chrome Version: {chrome_version}")
+    logging.info(f"Summary: Chrome Binary Exists: {'YES' if os.path.exists(CHROME_BINARY_LOCATION) else 'NO'}")
     logging.info(f"Summary: Detected ChromeDriver Version: {driver_version}")
     
-    if chrome_version != "N/A" and driver_version != "N/A":
-        chrome_major = chrome_version.split('.')[0]
-        driver_major = driver_version.split('.')[0]
-        if chrome_major != driver_major:
-            logging.error(f"MAJOR VERSION MISMATCH: Chrome ({chrome_major}) vs ChromeDriver ({driver_major}). YOU MUST UPDATE CHROMEDRIVER.")
-        else:
-            logging.info("Chrome and ChromeDriver major versions match.")
+    # We can't perform a reliable Chrome vs ChromeDriver version check here
+    # without executing chrome.exe. This check is less critical as Selenium itself
+    # will raise an error if the versions are incompatible when it tries to launch.
 
+# Call the function after definition
 get_browser_and_driver_versions()
 
 
@@ -578,6 +570,7 @@ async def scrape_post_data(post_url: str, app_instance=None, logged_in_username:
             if app_instance:
                 app_instance.set_status_from_thread("Instaloader: Anonymous scrape (network error).")
         except Exception as e:
+            data["error"] = f"Instaloader session load error: {e}"
             logging.error(f"[Instaloader] Unexpected error loading session: {e}", exc_info=True)
             if app_instance:
                 app_instance.set_status_from_thread("Instaloader: Session‐load error; anonymous scrape.")

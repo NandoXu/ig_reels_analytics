@@ -381,11 +381,6 @@
             "family": "Ubuntu",
             "size": 13,
             "weight": "normal"
-        },
-        "DEFAULT": {
-            "family": "Helvetica",
-            "size": 13,
-            "weight": "normal"
         }
     }
 }

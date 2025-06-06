@@ -191,11 +191,6 @@ custom_theme_dict = {
             "family": "Ubuntu",
             "size": 13,
             "weight": "normal",
-        },
-        "DEFAULT": {
-            "family": "Helvetica",
-            "size": 13,
-            "weight": "normal",
         }
     }
 }
@@ -277,8 +272,12 @@ class InstagramScraperApp:
                     col: (row_dict.get(col) if row_dict.get(col) is not None else "N/A")
                     for col in self.columns
                 }
-                self.scraped_data_for_table.append(post_data_gui)
-                self._add_to_table(post_data_gui, from_db=True)
+                # Check if the loaded data has an error and apply the tag
+                if "error" in post_data_gui and post_data_gui["error"] != "N/A":
+                    self._add_to_table(post_data_gui, from_db=True, tag="failed")
+                else:
+                    self._add_to_table(post_data_gui, from_db=True)
+                self.scraped_data_for_table.append(post_data_gui) # Append after adding to table
 
             self.set_status(f"{len(rows)} records loaded. Ready.")
             logging.info(f"{len(rows)} records loaded from database.")
@@ -351,7 +350,8 @@ class InstagramScraperApp:
             relief="flat",
             padding=(5, 5)
         )
-        self.tree.tag_configure("failed", background="#FFCCCC", foreground="black")
+        # Define the style for 'failed' rows
+        self.tree.tag_configure("failed", background="#FFCCCC", foreground="black") # Light red background for failed rows
 
         col_widths = {
             "link": 250, "post_date": 120, "last_record": 150,
@@ -745,49 +745,35 @@ class InstagramScraperApp:
         shortcode = get_shortcode_from_url(post_url) or "unknown_post"
         current_timestamp_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        is_total_failure = False
-        if scraped_data_dict.get("error"):
-            owner = scraped_data_dict.get("owner", "N/A")
-            likes = scraped_data_dict.get("likes", "N/A")
-            comments = scraped_data_dict.get("comments", "N/A")
-            views = scraped_data_dict.get("views", "N/A")
-            
-            # Check if it's a video post for total failure assessment
-            # Assuming post_obj is not always present if Instaloader failed early.
-            # Simplified check based on whether primary data points are N/A.
-            if all(val in ("N/A", None, "") for val in (owner, likes, comments)):
-                is_total_failure = True
-            elif scraped_data_dict.get("is_video", False) and views in ("N/A", None, ""):
-                # If it's a video and views are still N/A, it's a partial failure for views specifically
-                # but not necessarily a total failure unless other fields are also N/A.
-                pass # Already handled by the 'error' key, this isn't a *total* scrape failure.
+        has_error = scraped_data_dict.get("error") is not None and scraped_data_dict.get("error") != ""
 
-        if is_total_failure:
+        if has_error:
             error_message = scraped_data_dict.get("error", "Unknown error")
-            self.set_status(f"Scrape: Total failure for {shortcode} - {error_message}") # Uses temporary notification
-            logging.error(f"Handling total scrape failure for {shortcode}: {error_message}")
+            self.set_status(f"Scrape: Failed for {shortcode} - {error_message}") # Uses temporary notification
+            logging.error(f"Handling scrape failure for {shortcode}: {error_message}")
         else:
-            if scraped_data_dict.get("error"):
-                error_message = scraped_data_dict["error"]
-                self.set_status(f"Scrape: Partial success for {shortcode} - {error_message}") # Uses temporary notification
-                logging.warning(f"Partial scrape error for {shortcode}: {error_message}")
-            else:
-                self.set_status(f"Scrape: Data for {shortcode} recorded successfully.") # Uses temporary notification
-                logging.info(f"Scrape: Data for {shortcode} successfully handled and recorded.")
+            self.set_status(f"Scrape: Data for {shortcode} recorded successfully.") # Uses temporary notification
+            logging.info(f"Scrape: Data for {shortcode} successfully handled and recorded.")
 
-            gui_data = {
-                "link": scraped_data_dict.get("link", post_url),
-                "post_date": scraped_data_dict.get("post_date", "N/A"),
-                "last_record": current_timestamp_str,
-                "owner": scraped_data_dict.get("owner", "N/A"),
-                "likes": scraped_data_dict.get("likes", "N/A"),
-                "comments": scraped_data_dict.get("comments", "N/A"),
-                "views": scraped_data_dict.get("views", "N/A"),
-                "engagement_rate": scraped_data_dict.get("engagement_rate", "N/A")
-            }
-            self.scraped_data_for_table.append(gui_data)
+        gui_data = {
+            "link": scraped_data_dict.get("link", post_url),
+            "post_date": scraped_data_dict.get("post_date", "N/A"),
+            "last_record": current_timestamp_str,
+            "owner": scraped_data_dict.get("owner", "N/A"),
+            "likes": scraped_data_dict.get("likes", "N/A"),
+            "comments": scraped_data_dict.get("comments", "N/A"),
+            "views": scraped_data_dict.get("views", "N/A"),
+            "engagement_rate": scraped_data_dict.get("engagement_rate", "N/A")
+        }
+        self.scraped_data_for_table.append(gui_data)
+        
+        # Pass a tag if there was an error for visual indication
+        if has_error:
+            self._add_to_table(gui_data, tag="failed")
+        else:
             self._add_to_table(gui_data)
-            save_to_database(gui_data, shortcode)
+        
+        save_to_database(gui_data, shortcode)
 
         # Button state is now managed by the calling thread's finally block, not here.
 
@@ -801,9 +787,14 @@ class InstagramScraperApp:
         self.export_button.configure(state=state)
         self.logout_instaloader_button.configure(state=state) # Configure logout button state
 
-    def _add_to_table(self, post_data, from_db=False):
+    def _add_to_table(self, post_data, from_db=False, tag=None): # Added 'tag' parameter
         values = [post_data.get(col, "N/A") for col in self.columns]
-        item_id = self.tree.insert("", tk.END, values=values)
+        # Insert item with a tag if provided
+        if tag:
+            item_id = self.tree.insert("", tk.END, values=values, tags=(tag,))
+        else:
+            item_id = self.tree.insert("", tk.END, values=values)
+
         if not from_db:
             self.tree.see(item_id)
 
@@ -866,39 +857,46 @@ def login_sequence(root):
         return None # Critical error, cannot proceed without Chrome binary
 
     # --- Step 1: Open Selenium browser automatically at startup for login/session management ---
-    logging.info(f"Opening Selenium browser for initial Instagram login/session management. Using binary: {CHROME_BINARY_LOCATION}")
+    logging.info(f"Attempting headless Selenium browser for initial Instagram login/session management. Using binary: {CHROME_BINARY_LOCATION}")
     
     service = Service(executable_path=CHROMEDRIVER_EXECUTABLE_PATH)
     
-    headed_options = Options()
-    headed_options.headless = False
-    headed_options.add_argument("--window-size=1920,1080")
-    headed_options.add_argument(f"user-data-dir={BROWSER_USER_DATA_DIR}") # Ensure persistent profile
-    headed_options.add_experimental_option("detach", True) # Keep browser open after script exits (for manual resolution)
-    headed_options.binary_location = CHROME_BINARY_LOCATION # Forces the specific Chrome binary
+    # Configure options for HEADLESS browser
+    headless_options = Options()
+    headless_options.headless = True # Set to True for headless operation
+    headless_options.add_argument("--window-size=1920,1080")
+    headless_options.add_argument(f"user-data-dir={BROWSER_USER_DATA_DIR}") # Ensure persistent profile
+    headless_options.add_argument("--no-sandbox")
+    headless_options.add_argument("--disable-dev-shm-usage")
+    headless_options.add_argument("--log-level=3")
+    headless_options.add_argument("--disable-gpu") # Added: disable GPU acceleration for headless
+    headless_options.add_argument("--hide-scrollbars") # Added: hide scrollbars
+    headless_options.add_argument("--mute-audio") # Added: mute audio
+    headless_options.binary_location = CHROME_BINARY_LOCATION # Forces the specific Chrome binary
     
     challenge_driver = None
     try:
-        challenge_driver = webdriver.Chrome(service=service, options=headed_options)
+        challenge_driver = webdriver.Chrome(service=service, options=headless_options)
         challenge_driver.set_page_load_timeout(60)
         challenge_driver.get("https://www.instagram.com/") # Navigate to Instagram home/login
         
-        messagebox.showinfo("Instagram Login / Session Management",
-                            "A Chrome browser window has opened. This is the 'Chrome is being controlled by automated test software' instance.\n\nPlease log in to Instagram manually in this browser or resolve any security challenges (e.g., email/phone verification).\n\n**Crucially, ensure you log in to the account you want to use for scraping in this browser.**\n\nClick OK here *after* you have successfully logged in this browser.",
-                            parent=root)
+        # Removed messagebox.showinfo about browser opening, as it's now headless.
+        logging.info("Headless browser initiated for session management. Attempting to manage session automatically.")
+        
+        # Give some time for headless browser to potentially resolve session/redirect
+        time.sleep(5) 
         
     except WebDriverException as e:
-        logging.error(f"Failed to open browser for initial Instagram login. This may indicate an issue with ChromeDriver or Chrome installation/version mismatch or path: {e}", exc_info=True)
+        logging.error(f"Failed to open HEADLESS browser for initial Instagram login. This may indicate an issue with ChromeDriver or Chrome installation/version mismatch or path: {e}", exc_info=True)
         messagebox.showerror("Browser Error", f"Could not open controlled Chrome browser for Instagram login. Please ensure chromedriver.exe and Chrome browser are correctly installed and matching versions, and CHROMEDRIVER_EXECUTABLE_PATH/CHROME_BINARY_LOCATION are set correctly in scraper.py. Error: {e}", parent=root)
         return None # Critical error, cannot proceed with login
 
-    finally:
-        if challenge_driver:
-             challenge_driver.quit()
+    # Removed the finally block with challenge_driver.quit()
+    # The driver will now persist until the Python process ends or it's manually quit.
+    # We will store the driver instance for potential later use or explicit quitting.
 
-
-    # --- Step 2: After manual browser interaction, attempt to load Instaloader session ---
-    logging.info("Attempting to auto-load Instaloader session after manual browser interaction...")
+    # --- Step 2: After headless browser interaction, attempt to load Instaloader session ---
+    logging.info("Attempting to auto-load Instaloader session after headless browser interaction...")
     session_files = [f for f in os.listdir(USER_DATA_DIR) if os.path.isfile(os.path.join(USER_DATA_DIR, f))]
     session_files.sort(key=lambda f: os.path.getmtime(os.path.join(USER_DATA_DIR, f)), reverse=True)
 
@@ -937,7 +935,7 @@ def login_sequence(root):
 
     # --- Step 3: If Instaloader session still not found/valid, fall back to Instaloader credential dialog ---
     if not instaloader_login_successful:
-        logging.info("Instaloader session still not found/valid after manual browser interaction. Prompting for Instaloader credentials.")
+        logging.info("Instaloader session still not found/valid after headless browser interaction. Prompting for Instaloader credentials.")
         
         while not instaloader_login_successful:
             dialog = tk.Toplevel(root) 
