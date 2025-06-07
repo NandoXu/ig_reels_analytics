@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 import asyncio
 import time
 import subprocess
+import shutil
+import sys
 
 import instaloader
 from instaloader import (
@@ -27,6 +29,11 @@ import requests
 import json
 from bs4 import BeautifulSoup
 
+# --- Custom Exception for Path Errors ---
+class BrowserPathError(Exception):
+    """Custom exception for when Chrome or ChromeDriver paths are not found."""
+    pass
+
 # --- Configuration ---
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 USER_DATA_DIR = os.path.join(SCRIPT_DIR, "instaloader_session_data")
@@ -35,53 +42,110 @@ BROWSER_USER_DATA_DIR = os.path.join(SCRIPT_DIR, "browser_user_data")
 os.makedirs(USER_DATA_DIR, exist_ok=True)
 os.makedirs(BROWSER_USER_DATA_DIR, exist_ok=True)
 
-# IMPORTANT: These paths must point to your specific portable Chrome and ChromeDriver.
-# They are explicitly set here to ensure the correct browser is used.
-# Based on your provided paths:
-# chromedriver.exe path: "C:\Users\freax\OneDrive\Desktop\Proper\chromedriver-win64"
-# chrome.exe path: "C:\Users\freax\OneDrive\Desktop\Proper\chrome-win64"
-# Assuming SCRIPT_DIR is "C:\Users\freax\OneDrive\Desktop\Proper"
-CHROMEDRIVER_EXECUTABLE_PATH = os.path.join(SCRIPT_DIR, "chromedriver-win64", "chromedriver.exe")
-CHROME_BINARY_LOCATION = os.path.join(SCRIPT_DIR, "chrome-win64", "chrome.exe")
+# Global variables for Chrome binary and ChromeDriver executable paths
+CHROME_BINARY_LOCATION = None
+CHROMEDRIVER_EXECUTABLE_PATH = None
 
 
-# Function to get Chrome and ChromeDriver versions for debugging and setting CHROME_BINARY_LOCATION
+# Function to get Chrome and ChromeDriver versions by auto-detection with robust fallbacks
 def get_browser_and_driver_versions():
     global CHROME_BINARY_LOCATION, CHROMEDRIVER_EXECUTABLE_PATH
     
-    logging.info(f"Using explicitly set Chrome binary path: {CHROME_BINARY_LOCATION}")
-    if os.path.exists(CHROME_BINARY_LOCATION):
-        # Removed direct execution of chrome.exe for version check to prevent accidental visible windows.
-        # The true check for Chrome usability will happen when Selenium initializes the driver.
-        logging.info(f"Chrome binary confirmed to exist at: {CHROME_BINARY_LOCATION}")
-    else:
-        logging.error(f"Portable Chrome binary NOT FOUND at expected path: {CHROME_BINARY_LOCATION}")
-        logging.error("Please ensure your portable Chrome is correctly located. Cannot guarantee Selenium operation.")
-
-    # Get ChromeDriver version (this is generally safe and necessary for version mismatch warnings)
+    chrome_version = "N/A"
     driver_version = "N/A"
-    logging.info(f"Checking for chromedriver.exe at explicitly set path: {CHROMEDRIVER_EXECUTABLE_PATH}")
-    if not os.path.exists(CHROMEDRIVER_EXECUTABLE_PATH):
-        logging.error(f"ChromeDriver executable NOT FOUND at {CHROMEDRIVER_EXECUTABLE_PATH}")
+
+    # --- Auto-detect Chrome Binary Location ---
+    logging.info("Attempting to auto-detect Chrome binary location using multiple strategies...")
+    
+    # Strategy 1: Check portable/local path relative to script first (most common for bundled apps)
+    portable_chrome_path = os.path.join(SCRIPT_DIR, "chrome-win64", "chrome.exe")
+    if os.path.exists(portable_chrome_path):
+        CHROME_BINARY_LOCATION = portable_chrome_path
+        logging.info(f"Found Chrome binary at portable path: {CHROME_BINARY_LOCATION}")
+    
+    # Strategy 2: If not found in portable path, check common system paths
+    if not CHROME_BINARY_LOCATION:
+        if sys.platform.startswith('win'):
+            # Order of preference: ProgramFiles, ProgramFiles(x86), LocalAppData, User AppData
+            candidate_paths = [
+                os.path.join(os.environ.get("PROGRAMFILES", ""), "Google", "Chrome", "Application", "chrome.exe"),
+                os.path.join(os.environ.get("PROGRAMFILES(X86)", ""), "Google", "Chrome", "Application", "chrome.exe"),
+                os.path.join(os.environ.get("LOCALAPPDATA", ""), "Google", "Chrome", "Application", "chrome.exe"),
+                os.path.join(os.path.expanduser("~"), "AppData", "Local", "Google", "Chrome", "Application", "chrome.exe")
+            ]
+            for path in candidate_paths:
+                if os.path.exists(path):
+                    CHROME_BINARY_LOCATION = path
+                    logging.info(f"Found Chrome binary at standard Windows installation path: {CHROME_BINARY_LOCATION}")
+                    break
+        elif sys.platform.startswith('darwin'):
+            candidate_paths = [
+                "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+                os.path.expanduser("~/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
+            ]
+            for path in candidate_paths:
+                if os.path.exists(path):
+                    CHROME_BINARY_LOCATION = path
+                    logging.info(f"Found Chrome binary at standard macOS installation path: {CHROME_BINARY_LOCATION}")
+                    break
+        elif sys.platform.startswith('linux'):
+            # Linux often uses 'which' or direct binary names in PATH
+            if shutil.which("google-chrome"):
+                CHROME_BINARY_LOCATION = shutil.which("google-chrome")
+                logging.info(f"Found Chrome binary via 'google-chrome' in PATH: {CHROME_BINARY_LOCATION}")
+            elif shutil.which("chrome"):
+                CHROME_BINARY_LOCATION = shutil.which("chrome")
+                logging.info(f"Found Chrome binary via 'chrome' in PATH: {CHROME_BINARY_LOCATION}")
+
+    if not CHROME_BINARY_LOCATION:
+        logging.error("CRITICAL: Chrome binary (chrome.exe or Google Chrome.app) NOT FOUND after all auto-detection attempts.")
+        logging.error("Please ensure Google Chrome browser is installed in a standard location, or ensure your 'chrome-win64' folder is correctly placed next to your script.")
+    else:
+        # Removed direct execution of chrome.exe for version check to prevent accidental visible windows.
+        # Chrome version will be implicitly known by the ChromeDriver version or handled by Selenium itself.
+        logging.info(f"Chrome binary confirmed to exist at: {CHROME_BINARY_LOCATION}")
+
+
+    # --- Auto-detect ChromeDriver Executable Path ---
+    logging.info("Attempting to auto-detect ChromeDriver executable location using multiple strategies...")
+    
+    # Strategy 1: Check portable/local path relative to script first
+    portable_chromedriver_path = os.path.join(SCRIPT_DIR, "chromedriver-win64", "chromedriver.exe")
+    if os.path.exists(portable_chromedriver_path):
+        CHROMEDRIVER_EXECUTABLE_PATH = portable_chromedriver_path
+        logging.info(f"Found ChromeDriver executable at portable path: {CHROMEDRIVER_EXECUTABLE_PATH}")
+
+    # Strategy 2: If not found in portable path, check system PATH
+    if not CHROMEDRIVER_EXECUTABLE_PATH:
+        detected_driver_path = shutil.which("chromedriver")
+        if detected_driver_path:
+            CHROMEDRIVER_EXECUTABLE_PATH = detected_driver_path
+            logging.info(f"Found ChromeDriver executable via system PATH: {CHROMEDRIVER_EXECUTABLE_PATH}")
+
+    if not CHROMEDRIVER_EXECUTABLE_PATH:
+        logging.error("CRITICAL: ChromeDriver executable NOT FOUND after all auto-detection attempts.")
+        logging.error("Please ensure chromedriver is installed (e.g., via npm, brew, or manual download) and its directory is added to your system's PATH environmental variable, or it's placed correctly in 'chromedriver-win64' next to your script.")
     else:
         try:
-            # This subprocess call for chromedriver --version is typically silent.
-            result = subprocess.run([CHROMEDRIVER_EXECUTABLE_PATH, "--version"], capture_output=True, text=True, check=True)
+            if sys.platform.startswith('win'):
+                result = subprocess.run([CHROMEDRIVER_EXECUTABLE_PATH, "--version"], capture_output=True, text=True, check=True, creationflags=subprocess.CREATE_NO_WINDOW)
+            else:
+                result = subprocess.run([CHROMEDRIVER_EXECUTABLE_PATH, "--version"], capture_output=True, text=True, check=True)
             match = re.search(r'ChromeDriver ([\d.]+)', result.stdout)
             if match:
                 driver_version = match.group(1)
-            logging.info(f"Found ChromeDriver executable at: {CHROMEDRIVER_EXECUTABLE_PATH} (Version: {driver_version})")
+            logging.info(f"Detected ChromeDriver Version: {driver_version} from {CHROMEDRIVER_EXECUTABLE_PATH}")
         except Exception as e:
-            logging.error(f"Could not get ChromeDriver version from {CHROMEDRIVER_EXECUTABLE_PATH}: {e}", exc_info=True)
+            logging.warning(f"Could not retrieve ChromeDriver version from '{CHROMEDRIVER_EXECUTABLE_PATH}': {e}", exc_info=True)
     
-    logging.info(f"Summary: Chrome Binary Exists: {'YES' if os.path.exists(CHROME_BINARY_LOCATION) else 'NO'}")
-    logging.info(f"Summary: Detected ChromeDriver Version: {driver_version}")
+    logging.info(f"Final Summary: Chrome Binary Path: {CHROME_BINARY_LOCATION if CHROME_BINARY_LOCATION else 'NOT FOUND'}")
+    logging.info(f"Final Summary: ChromeDriver Path: {CHROMEDRIVER_EXECUTABLE_PATH if CHROMEDRIVER_EXECUTABLE_PATH else 'NOT FOUND'}")
     
-    # We can't perform a reliable Chrome vs ChromeDriver version check here
-    # without executing chrome.exe. This check is less critical as Selenium itself
-    # will raise an error if the versions are incompatible when it tries to launch.
+    # No direct Chrome version check here, as it requires launching chrome.exe.
+    # Compatibility will be determined by Selenium when it tries to launch the browser.
 
-# Call the function after definition
+
+# Call the function after definition to populate paths
 get_browser_and_driver_versions()
 
 
@@ -267,29 +331,23 @@ async def scrape_views_selenium(post_url, app_instance, post_shortcode, owner_us
     
     # Setup Chrome options for headless and persistent user data
     options = Options()
-    # IMPORTANT CHANGE: Use --headless=new for better headless behavior with newer Chrome versions
-    options.add_argument("--headless=new") 
+    options.add_argument("--headless=new")
     options.add_argument("--window-size=1920,1080")
     options.add_argument(f"user-data-dir={BROWSER_USER_DATA_DIR}")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--log-level=3") # Suppress verbose Chrome logs
-    options.add_argument("--disable-gpu") # Often recommended for headless
-    options.add_argument("--hide-scrollbars") # Hide scrollbars
-    options.add_argument("--mute-audio") # Mute audio
+    options.add_argument("--log-level=3")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--hide-scrollbars")
+    options.add_argument("--mute-audio")
     
-    # Ensure binary_location is explicitly set if it was found by get_browser_and_driver_versions
-    if CHROME_BINARY_LOCATION:
-        options.binary_location = CHROME_BINARY_LOCATION
-    else:
-        # This case should ideally be caught by the login_sequence, but as a safeguard
-        logging.error("Selenium: CHROME_BINARY_LOCATION is not set, cannot launch headless browser. This should have been caught at startup.")
-        view_count = "N/A (Selenium Config Error)"
+    if CHROME_BINARY_LOCATION is None or not os.path.exists(CHROME_BINARY_LOCATION):
+        logging.error("Selenium: CHROME_BINARY_LOCATION is not found or not accessible. Cannot launch headless browser for scraping.")
+        view_count = "N/A (Selenium Config Error: Chrome binary not found)"
         return view_count
 
-    logging.info(f"Selenium: Looking for chromedriver.exe at: {CHROMEDRIVER_EXECUTABLE_PATH}")
-    if not os.path.exists(CHROMEDRIVER_EXECUTABLE_PATH):
-        logging.error(f"Selenium: chromedriver.exe NOT FOUND at {CHROMEDRIVER_EXECUTABLE_PATH}")
+    if CHROMEDRIVER_EXECUTABLE_PATH is None or not os.path.exists(CHROMEDRIVER_EXECUTABLE_PATH):
+        logging.error(f"Selenium: ChromeDriver executable NOT FOUND or not accessible at {CHROMEDRIVER_EXECUTABLE_PATH}. Cannot proceed with headless scrape.")
         view_count = f"N/A (Selenium Driver Not Found: {CHROMEDRIVER_EXECUTABLE_PATH})"
         return view_count
 
@@ -301,7 +359,7 @@ async def scrape_views_selenium(post_url, app_instance, post_shortcode, owner_us
         return view_count
 
     try:
-        driver = webdriver.Chrome(service=service, options=options) # This driver is ALWAYS headless
+        driver = webdriver.Chrome(service=service, options=options)
         driver.set_page_load_timeout(60)
 
         app_instance.set_status_from_thread(f"Selenium: Navigating to {owner_username}'s Reels tab (headless)...")
@@ -311,16 +369,14 @@ async def scrape_views_selenium(post_url, app_instance, post_shortcode, owner_us
         current_url = driver.current_url
         page_source = driver.page_source
 
-        # If login/challenge detected (even in headless), terminate and report failure (no visible browser ever appears here)
         if "login" in current_url.lower() or "challenge" in current_url.lower() or \
            "login_required" in page_source.lower() or \
            "security check" in page_source.lower() or \
            "something went wrong" in page_source.lower():
             logging.error(f"Selenium: Headless scraping session blocked for {post_shortcode}. Manual login/challenge required. Cannot proceed headless.")
             view_count = "N/A (Selenium Headless Blocked - Manual Login Required)"
-            return view_count # Return immediately as this driver should NOT become visible
+            return view_count
 
-        # Accept cookie banner if present (this runs for the headless driver)
         cookie_selectors = [
             (By.XPATH, "//button[contains(., 'Accept All')]"),
             (By.XPATH, "//button[contains(., 'Allow all cookies')]"),
@@ -337,23 +393,22 @@ async def scrape_views_selenium(post_url, app_instance, post_shortcode, owner_us
             except (TimeoutException, NoSuchElementException, ElementClickInterceptedException):
                 pass
 
-        # --- Find the reel in the grid (with robust scrolling) ---
         app_instance.set_status_from_thread(f"Selenium: Searching for reel {post_shortcode} in grid view (headless scrolling)...")
         
         reel_link_selector = f'a[href*="/reel/{post_shortcode}/"]'
         
-        reel_link_element = None # Initialize to None
+        reel_link_element = None
         
         last_height = -1
         no_change_scroll_count = 0
-        max_no_change_scrolls = 60 # Allows for many scrolls without height change
+        max_no_change_scrolls = 60
 
         previous_elements_count = 0
         no_new_elements_count = 0
-        max_no_new_elements_scrolls = 30 # Allows for many scrolls without new elements
+        max_no_new_elements_scrolls = 30
         
         total_scrolls = 0
-        max_total_scrolls_limit = 700 # Safety limit
+        max_total_scrolls_limit = 700
 
         while True:
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
@@ -691,8 +746,9 @@ async def scrape_post_data(post_url: str, app_instance=None, logged_in_username:
     data["engagement_rate"] = calculate_engagement_rate_post(likes_val, comments_val, views_val)
 
     # --- (6) Final timestamp ---
-    now_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S (UTC)")
-    data["last_record"] = now_str
+    # Using datetime.now() to get system's local time for saving to DB
+    now_str_local = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    data["last_record"] = now_str_local
 
     # Update status in your GUI (if provided)
     if app_instance:

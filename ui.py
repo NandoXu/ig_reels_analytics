@@ -9,6 +9,7 @@ import os
 import time
 import re
 import json
+import shutil # Import shutil for directory removal
 
 import instaloader
 
@@ -356,10 +357,26 @@ class InstagramScraperApp:
         main_frame = ctk.CTkFrame(self.root, fg_color="transparent") 
         main_frame.pack(expand=True, fill=tk.BOTH, padx=10, pady=10) 
 
+        # Top right section for username and logout button
+        top_right_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+        top_right_frame.pack(side=tk.TOP, anchor=tk.NE, padx=5, pady=5)
+
         self.username_label = ctk.CTkLabel(
-            main_frame, text="", font=ctk.CTkFont(size=12, weight="bold"), text_color="#333333"
+            top_right_frame, text="", font=ctk.CTkFont(size=12, weight="bold"), text_color="#333333"
         )
-        self.username_label.pack(side=tk.TOP, anchor=tk.NE, padx=5, pady=5)
+        self.username_label.pack(side=tk.LEFT, padx=(0, 10)) # Add some padding between label and button
+
+        self.logout_instaloader_button = ctk.CTkButton(
+            top_right_frame, 
+            text="Logout", # Changed button text to "Logout"
+            command=self.on_logout_instaloader,
+            fg_color=["#E0E0E0", "#E0E0E0"], # Default grey color
+            hover_color=["#FF6B6B", "#FF6B6B"], # Red on hover
+            text_color=["#333333", "#333333"], # Default text color
+            text_color_disabled=["#999999", "#999999"] # Darker grey for disabled text
+        )
+        self.logout_instaloader_button.pack(side=tk.RIGHT)
+
 
         table_frame = ctk.CTkFrame(main_frame, fg_color="transparent") 
         table_frame.pack(expand=True, fill=tk.BOTH, padx=5, pady=5)
@@ -458,20 +475,24 @@ class InstagramScraperApp:
         )
         self.export_button.pack(side=tk.LEFT, padx=5)
 
-        self.logout_instaloader_button = ctk.CTkButton(
-            other_buttons_frame, text="Logout Instaloader", command=self.on_logout_instaloader
-        )
-        self.logout_instaloader_button.pack(side=tk.LEFT, padx=5)
+        # Logout button moved to top_right_frame, so remove from here
+        # self.logout_instaloader_button = ctk.CTkButton(
+        #     other_buttons_frame, text="Logout Instaloader", command=self.on_logout_instaloader
+        # )
+        # self.logout_instaloader_button.pack(side=tk.LEFT, padx=5)
 
         self.tree.bind("<Button-3>", self._show_context_menu)
 
 
     def _update_username_display(self, username):
-        """Updates the username display label."""
+        """Updates the username display label and logout button state."""
         if username:
             self.username_label.configure(text=f"Logged in as: {username}")
+            self.logout_instaloader_button.configure(state=tk.NORMAL) # Enable logout button
         else:
             self.username_label.configure(text="Not logged in.")
+            self.logout_instaloader_button.configure(state=tk.DISABLED) # Disable logout button
+
 
     def set_status(self, message):
         """
@@ -677,19 +698,24 @@ class InstagramScraperApp:
 
 
     def on_logout_instaloader(self):
-        """Logs out from Instaloader by deleting the session file."""
+        """
+        Logs out from Instaloader by deleting the session file and clears
+        all browser user data (Selenium profiles).
+        """
         if not self.logged_in_username:
             self.set_status("Not currently logged in to Instaloader.")
             return
 
-        if not messagebox.askyesno("Confirm Logout", f"Are you sure you want to log out from Instaloader account '{self.logged_in_username}'?", parent=self.root):
+        if not messagebox.askyesno("Confirm Logout", 
+                                  f"Are you sure you want to log out from Instaloader account '{self.logged_in_username}' AND clear all browser session data?", 
+                                  parent=self.root):
             return
 
-        self.set_status(f"Logging out from Instaloader account '{self.logged_in_username}'...")
-        logging.info(f"Attempting to log out Instaloader user: {self.logged_in_username}")
+        self.set_status(f"Logging out from Instaloader account '{self.logged_in_username}' and clearing browser data...")
+        logging.info(f"Attempting to log out Instaloader user: {self.logged_in_username} and clear browser data.")
 
+        # --- Clear Instaloader Session Data ---
         session_filepath = os.path.join(USER_DATA_DIR, self.logged_in_username)
-        
         try:
             if os.path.exists(session_filepath):
                 os.remove(session_filepath)
@@ -698,20 +724,43 @@ class InstagramScraperApp:
                 logging.warning(f"Instaloader session file not found for deletion: {session_filepath}")
             
             global L
-            L = instaloader.Instaloader()
+            L = instaloader.Instaloader() # Re-initialize Instaloader to a fresh, unauthenticated state
             logging.info("Instaloader instance reset to unauthenticated state.")
-
-            self.logged_in_username = None
-            self._update_username_display(None)
-            self.set_status("Successfully logged out from Instaloader. Closing application.")
-            messagebox.showinfo("Logout Successful", "Successfully logged out from Instaloader.", parent=self.root)
-            self.root.destroy()
         except Exception as e:
-            self.set_status(f"Error during Instaloader logout: {e}")
-            logging.error(f"Error logging out Instaloader user: {e}", exc_info=True)
-            messagebox.showerror("Logout Error", f"Failed to log out from Instaloader: {e}", parent=self.root)
-        finally:
-            self._set_buttons_state(tk.NORMAL)
+            self.set_status(f"Error during Instaloader session deletion: {e}")
+            logging.error(f"Error deleting Instaloader session file: {e}", exc_info=True)
+            messagebox.showerror("Logout Error", f"Failed to delete Instaloader session: {e}", parent=self.root)
+            # Do not return here, attempt to clear browser data even if session deletion fails
+
+        # --- Clear Browser User Data (Selenium Profiles) ---
+        try:
+            if os.path.exists(BROWSER_USER_DATA_DIR):
+                # Ensure the manual login driver is quit before attempting to remove its profile
+                if self.manual_login_driver:
+                    try:
+                        self.manual_login_driver.quit()
+                        logging.info("Manual login browser quit before clearing browser data.")
+                        self.manual_login_driver = None # Clear reference
+                    except Exception as e:
+                        logging.warning(f"Error quitting manual login driver before clearing browser data: {e}", exc_info=True)
+
+                shutil.rmtree(BROWSER_USER_DATA_DIR)
+                logging.info(f"Browser user data directory removed: {BROWSER_USER_DATA_DIR}")
+                # Recreate the directory so it's ready for next launch
+                os.makedirs(BROWSER_USER_DATA_DIR)
+                logging.info(f"Recreated empty browser user data directory: {BROWSER_USER_DATA_DIR}")
+            else:
+                logging.warning(f"Browser user data directory not found: {BROWSER_USER_DATA_DIR}")
+        except Exception as e:
+            self.set_status(f"Error clearing browser user data: {e}")
+            logging.error(f"Error removing browser user data directory: {e}", exc_info=True)
+            messagebox.showerror("Logout Error", f"Failed to clear browser user data: {e}", parent=self.root)
+        
+        self.logged_in_username = None
+        self._update_username_display(None)
+        self.set_status("Successfully logged out and cleared browser data. Application will close.")
+        messagebox.showinfo("Logout Successful", "Successfully logged out and cleared browser data.", parent=self.root)
+        self.root.destroy() # Close the app after successful logout/cleanup
 
 
     def _run_batch_scrape_in_thread(self, filepath=None, urls_to_scrape_list=None):
@@ -872,7 +921,9 @@ class InstagramScraperApp:
         self.update_selected_button.configure(state=state)
         self.delete_selected_button.configure(state=state)
         self.export_button.configure(state=state)
-        self.logout_instaloader_button.configure(state=state)
+        # The logout button state is now handled by _update_username_display based on login status.
+        # So we don't change its state here with other buttons.
+        # self.logout_instaloader_button.configure(state=state) 
 
     def _refresh_table_display(self):
         for item in self.tree.get_children():
@@ -883,10 +934,14 @@ class InstagramScraperApp:
             values = []
             for col in self.columns:
                 value = post_data.get(col, "N/A")
-                if col == "engagement_rate" and isinstance(value, (int, float)) and value != "N/A":
-                    values.append(f"{value:.2f}%") # Format as percentage with 2 decimal places
-                elif col == "engagement_rate" and value == "N/A":
-                    values.append("N/A") # Keep "N/A" as is
+                if col == "engagement_rate":
+                    # Display as percentage string, handle both float and already-formatted string
+                    if isinstance(value, (int, float)) and value != "N/A":
+                        values.append(f"{value:.2f}%") # Format as percentage with 2 decimal places
+                    elif isinstance(value, str) and value.endswith('%'):
+                        values.append(value) # Already formatted from DB
+                    else:
+                        values.append("N/A") # Default for unparseable engagement rate
                 else:
                     values.append(value)
 
@@ -915,8 +970,9 @@ class InstagramScraperApp:
                     export_data = {}
                     for k, v in row_data_dict.items():
                         if k in self.columns: # Only export columns defined in self.columns
+                            # For CSV export, ensure engagement_rate is a string with % if it's a number
                             if k == "engagement_rate" and isinstance(v, (int, float)) and v != "N/A":
-                                export_data[k] = f"{v:.2f}%" # Export as percentage
+                                export_data[k] = f"{v:.2f}%"
                             else:
                                 export_data[k] = v
                     writer.writerow(export_data)
@@ -991,7 +1047,7 @@ class InstagramScraperApp:
                 self.tree.heading(c, text=c.replace("_", " ").title())
 
 
-def login_sequence(root, app_instance_ref):
+def login_sequence(root, app_instance_ref, show_overlay_cb, hide_overlay_cb): # Added overlay callbacks
     logged_in_instaloader_username = None
     instaloader_login_successful = False
 
@@ -1020,6 +1076,7 @@ def login_sequence(root, app_instance_ref):
     
     challenge_driver = None
     try:
+        show_overlay_cb("Starting Instagram Login Session...") # Show overlay
         challenge_driver = webdriver.Chrome(service=service, options=headed_options)
         challenge_driver.set_page_load_timeout(60)
         challenge_driver.get("https://www.instagram.com/")
@@ -1038,6 +1095,8 @@ def login_sequence(root, app_instance_ref):
         logging.error(f"Failed to open VISIBLE browser for initial Instagram login. This may indicate an issue with ChromeDriver or Chrome installation/version mismatch or path: {e}", exc_info=True)
         messagebox.showerror("Browser Error", f"Could not open controlled Chrome browser for Instagram login. Please ensure chromedriver.exe and Chrome browser are correctly installed and matching versions, and CHROMEDRIVER_EXECUTABLE_PATH/CHROME_BINARY_LOCATION are set correctly in scraper.py. Error: {e}", parent=root)
         return None
+    finally: # Ensure overlay is hidden even if an error occurs
+        hide_overlay_cb()
 
 
     logging.info("Attempting to auto-load Instaloader session after potential manual browser interaction...")

@@ -41,16 +41,23 @@ def save_to_database(post_data_dict, post_shortcode):
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
     try:
+        # Format engagement_rate as percentage string before saving
+        engagement_rate_value = post_data_dict.get("engagement_rate", "N/A")
+        if isinstance(engagement_rate_value, (int, float)) and engagement_rate_value != "N/A":
+            formatted_engagement_rate = f"{engagement_rate_value:.2f}%"
+        else:
+            formatted_engagement_rate = str(engagement_rate_value) # Ensures "N/A" or other strings are saved as-is
+
         db_row = {
             "post_shortcode": post_shortcode,
             "link": post_data_dict.get("link", "N/A"),
             "post_date": post_data_dict.get("post_date", "N/A"),
-            "last_record": post_data_dict.get("last_record", datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S (UTC)")),
+            "last_record": post_data_dict.get("last_record", datetime.now().strftime("%Y-%m-%d")), # Use local time for consistency with UI
             "owner": post_data_dict.get("owner", "N/A"),
             "likes": str(post_data_dict.get("likes", "N/A")),
             "comments": str(post_data_dict.get("comments", "N/A")),
             "views": str(post_data_dict.get("views", "N/A")),
-            "engagement_rate": str(post_data_dict.get("engagement_rate", "N/A")),
+            "engagement_rate": formatted_engagement_rate, # Save as percentage string
             "error": post_data_dict.get("error", None) # Save the error status
         }
         cursor.execute("""
