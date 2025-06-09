@@ -1,0 +1,15 @@
+[20004:7460:0609/153025.844:INFO:components\enterprise\browser\controller\chrome_browser_cloud_management_controller.cc:202] No machine level policy manager exists.
+[20004:7460:0609/153025.879:WARNING:chrome\browser\extensions\extension_service.cc:359] --load-extension is not allowed in Google Chrome, ignoring.
+[6668:10784:0609/153025.903:ERROR:ui\gl\direct_composition_support.cc:615] AMD VideoProcessorGetOutputExtension failed: Unspecified error (0x80004005)
+[20004:7460:0609/153028.188:INFO:CONSOLE:249] "
+%cStop! font-family:helvetica; font-size:20px; font-size:50px; font-weight:bold; color:red; -webkit-text-stroke:1px black;", source: https://static.cdninstagram.com/rsrc.php/v4/yU/r/qgLOtQHluXZ.js (249)
+[20004:7460:0609/153028.188:INFO:CONSOLE:249] "
+%cThis is a browser feature intended for developers. If someone told you to copy-paste something here to enable an Instagram feature or "hack" someone's account, it is a scam and will give them access to your Instagram account. font-family:helvetica; font-size:20px; ", source: https://static.cdninstagram.com/rsrc.php/v4/yU/r/qgLOtQHluXZ.js (249)
+[20004:7460:0609/153028.188:INFO:CONSOLE:249] "
+%cSee https://www.facebook.com/selfxss for more information. font-family:helvetica; font-size:20px; ", source: https://static.cdninstagram.com/rsrc.php/v4/yU/r/qgLOtQHluXZ.js (249)
+[20004:7460:0609/153028.188:INFO:CONSOLE:249] "
+%c ", source: https://static.cdninstagram.com/rsrc.php/v4/yU/r/qgLOtQHluXZ.js (249)
+[20004:7460:0609/153028.294:INFO:CONSOLE:0] "[DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o", source: https://www.instagram.com/ (0)
+[20004:7460:0609/153028.362:INFO:CONSOLE:0] "Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner.", source: https://www.instagram.com/ (0)
+[14792:10460:0609/153030.043:WARNING:net\extras\sqlite\sqlite_persistent_store_backend_base.cc:176] Failed to post task from FlushAndNotifyInBackground@net\extras\sqlite\sqlite_persistent_store_backend_base.cc:226 to client_task_runner_.
+[14792:10460:0609/153030.043:WARNING:net\extras\sqlite\sqlite_persistent_store_backend_base.cc:176] Failed to post task from FlushAndNotifyInBackground@net\extras\sqlite\sqlite_persistent_store_backend_base.cc:226 to client_task_runner_.
