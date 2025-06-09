@@ -110,7 +110,7 @@ def get_browser_and_driver_versions():
     logging.info("Attempting to auto-detect ChromeDriver executable location using multiple strategies...")
     
     # Strategy 1: Check portable/local path relative to script first
-    portable_chromedriver_path = os.path.join(SCRIPT_DIR, "chromedriver-win64", "chromedriver.exe")
+    portable_chromedriver_path = os.path.join(SCRIPT_DIR, "chromedriver-win64", "chromedriver")
     if os.path.exists(portable_chromedriver_path):
         CHROMEDRIVER_EXECUTABLE_PATH = portable_chromedriver_path
         logging.info(f"Found ChromeDriver executable at portable path: {CHROMEDRIVER_EXECUTABLE_PATH}")
