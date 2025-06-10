@@ -49,37 +49,36 @@ CHROMEDRIVER_EXECUTABLE_PATH = None
 
 # Function to get Chrome and ChromeDriver versions by auto-detection with robust fallbacks
 def get_browser_and_driver_versions():
-    """
-    Auto-detects paths for Chrome and ChromeDriver, prioritizing locations
-    within the script's directory for portability ("mac friendly").
-    """
     global CHROME_BINARY_LOCATION, CHROMEDRIVER_EXECUTABLE_PATH
-
-    logging.info("Attempting to auto-detect Chrome and ChromeDriver paths...")
+    
+    chrome_version = "N/A"
+    driver_version = "N/A"
 
     # --- Auto-detect Chrome Binary Location ---
-    # Strategy 1: Check for a portable Chrome/Chromium app in the same directory.
-    # On macOS, this would be "Google Chrome.app" or "Chromium.app".
-    # On Windows, "chrome-win64/chrome.exe". On Linux, "chrome".
-    if sys.platform.startswith('darwin'): # macOS
-        portable_chrome_path = os.path.join(SCRIPT_DIR, "Google Chrome.app", "Contents", "MacOS", "Google Chrome")
-        if os.path.exists(portable_chrome_path):
-            CHROME_BINARY_LOCATION = portable_chrome_path
-    elif sys.platform.startswith('win'): # Windows
-        portable_chrome_path = os.path.join(SCRIPT_DIR, "chrome-win64", "chrome.exe")
-        if os.path.exists(portable_chrome_path):
-            CHROME_BINARY_LOCATION = portable_chrome_path
-    elif sys.platform.startswith('linux'): # Linux
-        portable_chrome_path = os.path.join(SCRIPT_DIR, "chrome")
-        if os.path.exists(portable_chrome_path):
-            CHROME_BINARY_LOCATION = portable_chrome_path
-
-    if CHROME_BINARY_LOCATION:
-        logging.info(f"Found portable Chrome binary at: {CHROME_BINARY_LOCATION}")
-    else:
-        # Strategy 2: If not found in portable path, check common system paths
-        logging.info("Portable Chrome not found. Checking standard installation locations...")
-        if sys.platform.startswith('darwin'):
+    logging.info("Attempting to auto-detect Chrome binary location using multiple strategies...")
+    
+    # Strategy 1: Check portable/local path relative to script first (most common for bundled apps)
+    portable_chrome_path = os.path.join(SCRIPT_DIR, "chrome-win64", "chrome.exe")
+    if os.path.exists(portable_chrome_path):
+        CHROME_BINARY_LOCATION = portable_chrome_path
+        logging.info(f"Found Chrome binary at portable path: {CHROME_BINARY_LOCATION}")
+    
+    # Strategy 2: If not found in portable path, check common system paths
+    if not CHROME_BINARY_LOCATION:
+        if sys.platform.startswith('win'):
+            # Order of preference: ProgramFiles, ProgramFiles(x86), LocalAppData, User AppData
+            candidate_paths = [
+                os.path.join(os.environ.get("PROGRAMFILES", ""), "Google", "Chrome", "Application", "chrome.exe"),
+                os.path.join(os.environ.get("PROGRAMFILES(X86)", ""), "Google", "Chrome", "Application", "chrome.exe"),
+                os.path.join(os.environ.get("LOCALAPPDATA", ""), "Google", "Chrome", "Application", "chrome.exe"),
+                os.path.join(os.path.expanduser("~"), "AppData", "Local", "Google", "Chrome", "Application", "chrome.exe")
+            ]
+            for path in candidate_paths:
+                if os.path.exists(path):
+                    CHROME_BINARY_LOCATION = path
+                    logging.info(f"Found Chrome binary at standard Windows installation path: {CHROME_BINARY_LOCATION}")
+                    break
+        elif sys.platform.startswith('darwin'):
             candidate_paths = [
                 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
                 os.path.expanduser("~/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
@@ -87,58 +86,63 @@ def get_browser_and_driver_versions():
             for path in candidate_paths:
                 if os.path.exists(path):
                     CHROME_BINARY_LOCATION = path
-                    break
-        elif sys.platform.startswith('win'):
-            candidate_paths = [
-                os.path.join(os.environ.get("PROGRAMFILES", ""), "Google", "Chrome", "Application", "chrome.exe"),
-                os.path.join(os.environ.get("PROGRAMFILES(X86)", ""), "Google", "Chrome", "Application", "chrome.exe"),
-                os.path.join(os.environ.get("LOCALAPPDATA", ""), "Google", "Chrome", "Application", "chrome.exe")
-            ]
-            for path in candidate_paths:
-                if os.path.exists(path):
-                    CHROME_BINARY_LOCATION = path
+                    logging.info(f"Found Chrome binary at standard macOS installation path: {CHROME_BINARY_LOCATION}")
                     break
         elif sys.platform.startswith('linux'):
-            # shutil.which searches the system's PATH environment variable.
-            CHROME_BINARY_LOCATION = shutil.which("google-chrome") or shutil.which("chrome") or shutil.which("chromium-browser")
+            # Linux often uses 'which' or direct binary names in PATH
+            if shutil.which("google-chrome"):
+                CHROME_BINARY_LOCATION = shutil.which("google-chrome")
+                logging.info(f"Found Chrome binary via 'google-chrome' in PATH: {CHROME_BINARY_LOCATION}")
+            elif shutil.which("chrome"):
+                CHROME_BINARY_LOCATION = shutil.which("chrome")
+                logging.info(f"Found Chrome binary via 'chrome' in PATH: {CHROME_BINARY_LOCATION}")
 
-    if CHROME_BINARY_LOCATION and os.path.exists(CHROME_BINARY_LOCATION):
-         logging.info(f"Confirmed Chrome binary location: {CHROME_BINARY_LOCATION}")
+    if not CHROME_BINARY_LOCATION:
+        logging.error("CRITICAL: Chrome binary (chrome.exe or Google Chrome.app) NOT FOUND after all auto-detection attempts.")
+        logging.error("Please ensure Google Chrome browser is installed in a standard location, or ensure your 'chrome-win64' folder is correctly placed next to your script.")
     else:
-        logging.error("CRITICAL: Google Chrome binary not found. Please place it in the script directory or install it system-wide.")
+        # Removed direct execution of chrome.exe for version check to prevent accidental visible windows.
+        # Chrome version will be implicitly known by the ChromeDriver version or handled by Selenium itself.
+        logging.info(f"Chrome binary confirmed to exist at: {CHROME_BINARY_LOCATION}")
 
 
     # --- Auto-detect ChromeDriver Executable Path ---
-    # Strategy 1: Check for "chromedriver" in the same directory as the script.
-    # The executable name is the same across platforms.
-    portable_chromedriver_path = os.path.join(SCRIPT_DIR, "chromedriver")
+    logging.info("Attempting to auto-detect ChromeDriver executable location using multiple strategies...")
+    
+    # Strategy 1: Check portable/local path relative to script first
+    portable_chromedriver_path = os.path.join(SCRIPT_DIR, "chromedriver-win64", "chromedriver.exe")
     if os.path.exists(portable_chromedriver_path):
         CHROMEDRIVER_EXECUTABLE_PATH = portable_chromedriver_path
-        logging.info(f"Found portable ChromeDriver executable at: {CHROMEDRIVER_EXECUTABLE_PATH}")
-    else:
-        # Strategy 2: Check system PATH.
-        logging.info("Portable chromedriver not found. Checking system PATH...")
-        CHROMEDRIVER_EXECUTABLE_PATH = shutil.which("chromedriver")
+        logging.info(f"Found ChromeDriver executable at portable path: {CHROMEDRIVER_EXECUTABLE_PATH}")
 
-    if CHROMEDRIVER_EXECUTABLE_PATH and os.path.exists(CHROMEDRIVER_EXECUTABLE_PATH):
-        logging.info(f"Confirmed ChromeDriver executable location: {CHROMEDRIVER_EXECUTABLE_PATH}")
+    # Strategy 2: If not found in portable path, check system PATH
+    if not CHROMEDRIVER_EXECUTABLE_PATH:
+        detected_driver_path = shutil.which("chromedriver")
+        if detected_driver_path:
+            CHROMEDRIVER_EXECUTABLE_PATH = detected_driver_path
+            logging.info(f"Found ChromeDriver executable via system PATH: {CHROMEDRIVER_EXECUTABLE_PATH}")
+
+    if not CHROMEDRIVER_EXECUTABLE_PATH:
+        logging.error("CRITICAL: ChromeDriver executable NOT FOUND after all auto-detection attempts.")
+        logging.error("Please ensure chromedriver is installed (e.g., via npm, brew, or manual download) and its directory is added to your system's PATH environmental variable, or it's placed correctly in 'chromedriver-win64' next to your script.")
+    else:
         try:
-            # Platform-agnostic subprocess call (removed Windows-specific creationflags)
-            result = subprocess.run(
-                [CHROMEDRIVER_EXECUTABLE_PATH, "--version"],
-                capture_output=True, text=True, check=True
-            )
+            if sys.platform.startswith('win'):
+                result = subprocess.run([CHROMEDRIVER_EXECUTABLE_PATH, "--version"], capture_output=True, text=True, check=True, creationflags=subprocess.CREATE_NO_WINDOW)
+            else:
+                result = subprocess.run([CHROMEDRIVER_EXECUTABLE_PATH, "--version"], capture_output=True, text=True, check=True)
             match = re.search(r'ChromeDriver ([\d.]+)', result.stdout)
             if match:
                 driver_version = match.group(1)
-                logging.info(f"Detected ChromeDriver Version: {driver_version}")
+            logging.info(f"Detected ChromeDriver Version: {driver_version} from {CHROMEDRIVER_EXECUTABLE_PATH}")
         except Exception as e:
-            logging.warning(f"Could not retrieve ChromeDriver version: {e}", exc_info=True)
-    else:
-        logging.error("CRITICAL: ChromeDriver executable not found. Please place it in the script directory or ensure its location is in the system PATH.")
-
-    logging.info(f"Final Chrome Path: {CHROME_BINARY_LOCATION or 'NOT FOUND'}")
-    logging.info(f"Final ChromeDriver Path: {CHROMEDRIVER_EXECUTABLE_PATH or 'NOT FOUND'}")
+            logging.warning(f"Could not retrieve ChromeDriver version from '{CHROMEDRIVER_EXECUTABLE_PATH}': {e}", exc_info=True)
+    
+    logging.info(f"Final Summary: Chrome Binary Path: {CHROME_BINARY_LOCATION if CHROME_BINARY_LOCATION else 'NOT FOUND'}")
+    logging.info(f"Final Summary: ChromeDriver Path: {CHROMEDRIVER_EXECUTABLE_PATH if CHROMEDRIVER_EXECUTABLE_PATH else 'NOT FOUND'}")
+    
+    # No direct Chrome version check here, as it requires launching chrome.exe.
+    # Compatibility will be determined by Selenium when it tries to launch the browser.
 
 
 # Call the function after definition to populate paths
@@ -153,9 +157,9 @@ L.context.timeout = 300
 # ------------- Configuration for direct HTML (requests) logic -------------
 HEADERS = {
     "User-Agent": (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "Mozilla/50 (Windows NT 10.0; Win64; x64) "
         "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/94.0.4606.81 Safari/537.36" # User-Agent updated for Mac
+        "Chrome/94.0.4606.81 Safari/537.36"
     )
 }
 REQUEST_TIMEOUT = 15
@@ -339,32 +343,40 @@ async def scrape_views_selenium(post_url, app_instance, post_shortcode, owner_us
     
     if CHROME_BINARY_LOCATION is None or not os.path.exists(CHROME_BINARY_LOCATION):
         logging.error("Selenium: CHROME_BINARY_LOCATION is not found or not accessible. Cannot launch headless browser for scraping.")
-        return "N/A (Selenium Config Error: Chrome binary not found)"
+        view_count = "N/A (Selenium Config Error: Chrome binary not found)"
+        return view_count
 
     if CHROMEDRIVER_EXECUTABLE_PATH is None or not os.path.exists(CHROMEDRIVER_EXECUTABLE_PATH):
         logging.error(f"Selenium: ChromeDriver executable NOT FOUND or not accessible at {CHROMEDRIVER_EXECUTABLE_PATH}. Cannot proceed with headless scrape.")
-        return f"N/A (Selenium Driver Not Found)"
+        view_count = f"N/A (Selenium Driver Not Found: {CHROMEDRIVER_EXECUTABLE_PATH})"
+        return view_count
 
-    # Set the binary location in the options
-    options.binary_location = CHROME_BINARY_LOCATION
-    
     try:
         service = Service(executable_path=CHROMEDRIVER_EXECUTABLE_PATH)
+    except WebDriverException as e:
+        logging.error(f"Selenium: Chromedriver service setup failed: {e}", exc_info=True)
+        view_count = f"N/A (Selenium Driver Setup Error: {e})"
+        return view_count
+
+    try:
         driver = webdriver.Chrome(service=service, options=options)
         driver.set_page_load_timeout(60)
 
         app_instance.set_status_from_thread(f"Selenium: Navigating to {owner_username}'s Reels tab (headless)...")
         driver.get(profile_reels_url)
-        time.sleep(3) # Wait for potential redirects
+        time.sleep(3)
 
         current_url = driver.current_url
-        page_source = driver.page_source.lower()
+        page_source = driver.page_source
 
-        if "login" in current_url.lower() or "challenge" in current_url.lower() or "login_required" in page_source or "security check" in page_source or "something went wrong" in page_source:
-            logging.error(f"Selenium: Headless scraping session blocked for {post_shortcode}. Manual login/challenge required.")
-            return "N/A (Selenium Headless Blocked - Login Required)"
+        if "login" in current_url.lower() or "challenge" in current_url.lower() or \
+           "login_required" in page_source.lower() or \
+           "security check" in page_source.lower() or \
+           "something went wrong" in page_source.lower():
+            logging.error(f"Selenium: Headless scraping session blocked for {post_shortcode}. Manual login/challenge required. Cannot proceed headless.")
+            view_count = "N/A (Selenium Headless Blocked - Manual Login Required)"
+            return view_count
 
-        # Handle cookie banners
         cookie_selectors = [
             (By.XPATH, "//button[contains(., 'Accept All')]"),
             (By.XPATH, "//button[contains(., 'Allow all cookies')]"),
@@ -381,98 +393,191 @@ async def scrape_views_selenium(post_url, app_instance, post_shortcode, owner_us
             except (TimeoutException, NoSuchElementException, ElementClickInterceptedException):
                 pass
 
-        app_instance.set_status_from_thread(f"Selenium: Searching for reel {post_shortcode} in grid...")
+        app_instance.set_status_from_thread(f"Selenium: Searching for reel {post_shortcode} in grid view (headless scrolling)...")
         
         reel_link_selector = f'a[href*="/reel/{post_shortcode}/"]'
+        
         reel_link_element = None
         
-        # Enhanced scrolling logic
         last_height = -1
         no_change_scroll_count = 0
-        max_no_change_scrolls = 5 # More aggressive stop condition
-        total_scrolls = 0
-        max_total_scrolls = 500 # Generous limit
+        max_no_change_scrolls = 60
 
-        while total_scrolls < max_total_scrolls:
+        previous_elements_count = 0
+        no_new_elements_count = 0
+        max_no_new_elements_scrolls = 30
+        
+        total_scrolls = 0
+        max_total_scrolls_limit = 700
+
+        while True:
+            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            time.sleep(7)
+
+            new_height = driver.execute_script("return document.body.scrollHeight")
+            
             try:
-                # Check if element is present before scrolling more
                 reel_link_element = driver.find_element(By.CSS_SELECTOR, reel_link_selector)
-                logging.info(f"Selenium: Found reel link {post_shortcode}.")
+                logging.info(f"Selenium: Found reel link {post_shortcode} after scrolling.")
                 break
             except NoSuchElementException:
-                # If not found, scroll and wait
-                driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-                time.sleep(4) # Give content time to load
+                pass
 
-                new_height = driver.execute_script("return document.body.scrollHeight")
-                if new_height == last_height:
-                    no_change_scroll_count += 1
-                else:
-                    no_change_scroll_count = 0
-                
-                if no_change_scroll_count >= max_no_change_scrolls:
-                    logging.warning("Selenium: Scroll height has not changed. Assuming end of page.")
-                    break
-                
-                last_height = new_height
-                total_scrolls += 1
-        
+            current_elements_count = len(driver.find_elements(By.CSS_SELECTOR, reel_link_selector))
+            
+            if new_height == last_height and current_elements_count == previous_elements_count:
+                no_change_scroll_count += 1
+                no_new_elements_count += 1
+                logging.debug(f"Selenium: Scroll height and element count unchanged. No-change scroll count: {no_change_scroll_count}, no-new-elements count: {no_new_elements_count}")
+            else:
+                no_change_scroll_count = 0 
+                no_new_elements_count = 0 
+
+            last_height = new_height
+            previous_elements_count = current_elements_count
+            total_scrolls += 1
+
+            if (no_change_scroll_count >= max_no_change_scrolls and no_new_elements_count >= max_no_new_elements_scrolls) or \
+               total_scrolls >= max_total_scrolls_limit:
+                logging.info(f"Selenium: Reached end of scrollable content or no new content/elements loaded after static scrolls, or hit total scroll limit.")
+                break
+
+
         if reel_link_element is None:
-            logging.warning(f"Selenium: Reel link element NOT found for {post_shortcode} after extensive scrolling.")
-            return "N/A (Selenium Reel Not Found in Grid)"
+            logging.warning(f"Selenium: Reel link element NOT found for {post_shortcode} after scrolling through all content.")
+            view_count = "N/A (Selenium Reel Not Found in Grid after full scroll)"
+            return view_count
         
-        app_instance.set_status_from_thread(f"Selenium: Extracting views for {post_shortcode} from grid item...")
+        app_instance.set_status_from_thread(f"Selenium: Extracting views for {post_shortcode} from grid item (HTML parsing)...")
         
         try:
-            # Find a suitable parent container of the link to parse for the view count
-            # This XPath looks for the closest ancestor `div` that is a logical container.
-            container_element = reel_link_element.find_element(By.XPATH, "ancestor::div[div/span[contains(text(),'K') or contains(text(),'M')] or div/span/span][1]")
-            container_html = container_element.get_attribute('outerHTML')
+            containing_block_element = None
+            
+            try:
+                containing_block_element = reel_link_element.find_element(By.XPATH, 
+                    "ancestor::div[@role='link' or @role='button' or @tabindex='0'][1]" 
+                )
+                logging.debug(f"Selenium: Found containing block via XPath ancestor with role/tabindex for {post_shortcode}.")
+            except NoSuchElementException:
+                logging.debug(f"Selenium: XPath ancestor (role/tabindex) failed. Trying general 'x' prefixed class ancestor.")
+                
+            if not containing_block_element:
+                try:
+                    containing_block_element = reel_link_element.find_element(By.XPATH, 
+                        "ancestor::div[starts-with(@class, 'x')][1]" 
+                    )
+                    logging.debug(f"Selenium: Found containing block via XPath ancestor (starts-with x) for {post_shortcode}.")
+                except NoSuchElementException:
+                    logging.debug(f"Selenium: XPath ancestor (starts-with x) failed. Trying immediate parent.")
+
+            if not containing_block_element:
+                try:
+                    containing_block_element = reel_link_element.find_element(By.XPATH, "./..")
+                    logging.warning(f"Selenium: Falling back to immediate parent of reel link as containing block for {post_shortcode}.")
+                except NoSuchElementException:
+                    logging.error(f"Selenium: Failed to get immediate parent of reel link. Critical for {post_shortcode}.")
+                    view_count = "N/A (Selenium Container Not Found - Parent Error)"
+                    return view_count
+            
+            if not containing_block_element: 
+                 logging.error(f"Selenium: Critical: Could not find any suitable containing block element for reel {post_shortcode} after trying all methods.")
+                 view_count = "N/A (Selenium Grid Container Not Found - Critical)"
+                 return view_count
+
+
+            container_html = containing_block_element.get_attribute('outerHTML')
             soup = BeautifulSoup(container_html, "html.parser")
             
-            # Find the element with the play count icon for higher accuracy
-            play_icon_svg = soup.find('svg', {'aria-label': re.compile('play', re.IGNORECASE)})
+            found_parsed_views = None
+
+            # CRITICAL STRATEGY FOR PARSING VIEWS: Find the eye icon first, then its *exact* numerical sibling.
+            # This is the most reliable way to distinguish views from likes/comments.
+            eye_icon_svg = soup.find('svg', {'aria-label': re.compile('View Count Icon', re.IGNORECASE)}) 
             
-            view_text = None
-            if play_icon_svg:
-                # The view count is often a sibling to the icon's parent `div` or a `span` nearby
-                parent = play_icon_svg.parent
-                for sibling in parent.find_next_siblings():
-                    if sibling.name in ['span', 'div'] and re.search(r'\d', sibling.get_text()):
-                        view_text = sibling.get_text(strip=True)
+            if eye_icon_svg:
+                # Option 1: Direct next sibling span of the SVG
+                potential_number_span = eye_icon_svg.find_next_sibling(
+                    lambda tag: tag.name == 'span' and re.match(r'^\d[\d.,]*[kmb]?$', tag.get_text(strip=True), re.IGNORECASE)
+                )
+                if potential_number_span and parse_view_count_text(potential_number_span.get_text(strip=True)) is not None:
+                    found_parsed_views = parse_view_count_text(potential_number_span.get_text(strip=True))
+                    logging.info(f"Selenium: Extracted views={found_parsed_views} (eye_icon_direct_sibling='{potential_number_span.get_text(strip=True)}') from grid.")
+                
+                # Option 2: Find sibling divs of the SVG's parent, then look for number inside.
+                if found_parsed_views is None and eye_icon_svg.parent:
+                    for sibling in eye_icon_svg.parent.find_next_siblings():
+                        if sibling.name in ['div', 'span']:
+                            numbers_in_sibling = sibling.find_all(
+                                lambda tag: tag.name in ['span', 'div'] and re.match(r'^\d[\d.,]*[kmb]?$', tag.get_text(strip=True), re.IGNORECASE)
+                            )
+                            for num_elem in numbers_in_sibling:
+                                if num_elem.get('class') and 'x1vvkbs' in num_elem.get('class'): # Target the specific class from your screenshot
+                                    parsed_val = parse_view_count_text(num_elem.get_text(strip=True))
+                                    if parsed_val is not None:
+                                        found_parsed_views = parsed_val
+                                        logging.info(f"Selenium: Extracted views={found_parsed_views} (eye_icon_parent_sibling_target_class='{num_elem.get_text(strip=True)}') from grid.")
+                                        break
+                            if found_parsed_views is not None:
+                                break
+                    if found_parsed_views is None:
+                        numbers_in_parent_children = eye_icon_svg.parent.find_all(
+                            lambda tag: tag.name in ['span', 'div'] and re.match(r'^\d[\d.,]*[kmb]?$', tag.get_text(strip=True), re.IGNORECASE)
+                        )
+                        for num_elem in numbers_in_parent_children:
+                            if num_elem.get('class') and 'x1vvkbs' in num_elem.get('class'): # Target specific class
+                                parsed_val = parse_view_count_text(num_elem.get_text(strip=True))
+                                if parsed_val is not None:
+                                    found_parsed_views = parsed_val
+                                    logging.info(f"Selenium: Extracted views={found_parsed_views} (eye_icon_parent_child_target_class='{num_elem.get_text(strip=True)}') from grid.")
+                                    break
+                            if found_parsed_views is not None:
+                                break
+            
+            # Fallback if specific eye icon + sibling/child search fails.
+            if found_parsed_views is None:
+                specific_class_numerical_elems = soup.find_all('span', class_=re.compile(r'x1vvkbs', re.IGNORECASE)) 
+                for elem in specific_class_numerical_elems:
+                    text_content = elem.get_text(strip=True)
+                    parsed_val = parse_view_count_text(text_content)
+                    if parsed_val is not None and parsed_val > 10: 
+                        found_parsed_views = parsed_val
+                        logging.info(f"Selenium: Extracted views={found_parsed_views} (fallback_x1vvkbs_class_match='{text_content}') from grid.")
                         break
-            
-            # Fallback if the icon-based method fails
-            if not view_text:
-                numeric_elements = soup.find_all(['span', 'div'], string=re.compile(r'^\s*\d+[\.,\d]*[KMB]?\s*$', re.I))
-                if numeric_elements:
-                    # Usually the last found numeric text is the view count in the grid item
-                    view_text = numeric_elements[-1].get_text(strip=True)
 
-            if view_text:
-                parsed_views = parse_view_count_text(view_text)
-                if parsed_views is not None:
-                    view_count = parsed_views
-                    logging.info(f"Selenium: Successfully extracted view count: {view_count} for {post_shortcode}")
-                else:
-                    view_count = f"N/A (Selenium Could Not Parse: '{view_text}')"
+            # Last Resort Fallback: Broadest search for any numerical span/div (highest risk of error).
+            if found_parsed_views is None:
+                all_numeric_elems = soup.find_all(lambda tag: tag.name in ['span', 'div'] and re.search(r'^\d[\d.,]*[kmb]?$', tag.get_text(strip=True), re.IGNORECASE))
+                if all_numeric_elems:
+                    best_candidate_val = None
+                    for elem in all_numeric_elems:
+                        parsed_val = parse_view_count_text(elem.get_text(strip=True))
+                        if parsed_val is not None and parsed_val > best_candidate_val:
+                            best_candidate_val = parsed_val
+                            found_parsed_views = best_candidate_val
+                            logging.info(f"Selenium: Extracted views={found_parsed_views} (generic numeric text fallback='{elem.get_text(strip=True)}') from grid.")
+                            break
+
+
+            if found_parsed_views is not None:
+                view_count = found_parsed_views
             else:
-                view_count = "N/A (Selenium View Element Not Found in HTML)"
-
+                logging.warning(f"Selenium: Failed to extract view count from grid item for {post_shortcode}. No reliable element found based on current heuristics.")
+                view_count = "N/A (Selenium Grid Extract Error - No View Element Found)"
         except Exception as e:
-            logging.error(f"Selenium: Error during view count HTML parsing for {post_shortcode}: {e}", exc_info=True)
+            logging.error(f"Selenium: Error during view count extraction from grid for {post_shortcode} (BeautifulSoup): {e}", exc_info=True)
             view_count = f"N/A (Selenium Grid Extract Error: {e})"
 
     except WebDriverException as e:
-        logging.error(f"Selenium: WebDriver Error for {post_shortcode}: {e.msg}", exc_info=True)
-        view_count = f"N/A (Selenium WebDriver Error)"
+        logging.error(f"Selenium: Top-level WebDriver Error for {post_shortcode}: {e}", exc_info=True)
+        view_count = f"N/A (Selenium Unexpected Driver Error: {e})"
     except Exception as e:
-        logging.error(f"Selenium: An unexpected error occurred for {post_shortcode}: {e}", exc_info=True)
-        view_count = f"N/A (Unexpected Selenium Error)"
+        logging.error(f"Selenium: Unexpected top-level error for {post_shortcode}: {e}", exc_info=True)
+        view_count = f"N/A (Unexpected Error: {e})"
     finally:
         if driver:
             try:
                 driver.quit()
+                logging.debug("Selenium: Browser closed in finally.")
             except Exception as e:
                 logging.debug(f"Selenium: Error closing driver: {e}")
     return view_count
@@ -481,6 +586,11 @@ async def scrape_views_selenium(post_url, app_instance, post_shortcode, owner_us
 async def scrape_post_data(post_url: str, app_instance=None, logged_in_username: str = None) -> dict:
     """
     Main function to scrape post data.
+    1. Fetches metadata (owner, likes, comments) with Instaloader.
+    2. For video posts, if Instaloader views are not found (or intentionally skipped):
+        a. Attempts to fetch view count via direct HTML parse (fastest, but often blocked).
+        b. If direct HTML fails, falls back to Selenium (from grid view, using shortcode lookup).
+    Accepts logged_in_username to load Instaloader session.
     """
     data = {
         "url": post_url,
@@ -493,7 +603,7 @@ async def scrape_post_data(post_url: str, app_instance=None, logged_in_username:
         "last_record": None,
         "engagement_rate": "N/A",
         "error": None,
-        "is_video": False
+        "is_video": False # Added to indicate if the post is a video for UI handling
     }
 
     shortcode = get_shortcode_from_url(post_url)
@@ -514,62 +624,121 @@ async def scrape_post_data(post_url: str, app_instance=None, logged_in_username:
             logging.warning(f"[Instaloader] No session file found for '{logged_in_username}'. Proceeding anonymously.")
             if app_instance:
                 app_instance.set_status_from_thread("Instaloader: Anonymous scrape (session not found).")
+        except instaloader_exceptions.ConnectionException as ce:
+            logging.warning(f"[Instaloader] Connection error loading session: {ce}. Proceeding anonymously.")
+            if app_instance:
+                app_instance.set_status_from_thread("Instaloader: Anonymous scrape (network error).")
+        except Exception as e:
+            data["error"] = f"Instaloader session load error: {e}"
+            logging.error(f"[Instaloader] Unexpected error loading session: {e}", exc_info=True)
+            if app_instance:
+                app_instance.set_status_from_thread("Instaloader: Session‐load error; anonymous scrape.")
     else:
-        logging.info("[Instaloader] No username provided, proceeding with anonymous scrape.")
+        logging.info("[Instaloader] No username provided → anonymous scrape.")
+        if app_instance:
+            app_instance.set_status_from_thread("Instaloader: Anonymous scrape (no user).")
 
+    # If session is not logged in, some private Reels will fail
     if not L.context.is_logged_in:
-        logging.warning("[Instaloader] Not logged in; data for private or restricted posts may be unavailable.")
+        logging.warning("[Instaloader] Not logged in; data for private reels may be unavailable.")
+        if app_instance:
+            app_instance.set_status_from_thread("Instaloader: Not logged in; scraping anonymously.")
 
-    # --- (2) Attempt to fetch the Post object via Instaloader ---
+    # --- (2) Attempt to fetch the Post object via Instaloader (for initial metadata) ---
     post_obj = None
     try:
         post_obj = Post.from_shortcode(L.context, shortcode)
+        # Store is_video status from Instaloader
         data["is_video"] = post_obj.is_video
-    except (instaloader_exceptions.BadResponseException, instaloader_exceptions.QueryReturnedBadRequestException, instaloader_exceptions.ProfileNotExistsException, instaloader_exceptions.ConnectionException) as e:
-        data["error"] = f"Instaloader Error: {type(e).__name__}"
-        logging.warning(f"[Instaloader] Could not fetch post object for {shortcode}: {e}", exc_info=True)
+    except instaloader_exceptions.BadResponseException as bre:
+        data["error"] = f"Instaloader BadResponse (403?): {bre}"
+        logging.warning(f"[Instaloader] {data['error']}", exc_info=True)
+    except instaloader_exceptions.QueryReturnedBadRequestException as qrbe:
+        data["error"] = f"Instaloader Query Error: {qrbe}"
+        logging.warning(f"[Instaloader] {data['error']}", exc_info=True)
+    except instaloader_exceptions.ProfileNotExistsException:
+        data["error"] = "Instaloader: Content owner's profile does not exist."
+        logging.warning(f"[Instaloader] {data['error']}")
+    except instaloader_exceptions.ConnectionException as ce:
+        data["error"] = f"Instaloader Connection Error: {ce}"
+        logging.error(f"[Instaloader] {data['error']}", exc_info=True)
     except Exception as e:
         data["error"] = f"Instaloader Unexpected Error: {e}"
         logging.error(f"[Instaloader] {data['error']}", exc_info=True)
-
-    if post_obj is None:
-        if not data["error"]:
+    
+    if post_obj is None: # If Instaloader failed to get post_obj, we can't proceed well
+        logging.error(f"[scrape_post_data] Instaloader failed to get post_obj for {shortcode}. Cannot proceed with scraping views.")
+        if not data["error"]: # If no error yet from above, set a generic one
             data["error"] = "Instaloader failed to retrieve post metadata."
         return data
 
     # --- (3) Pull metadata from post_obj ---
-    data["owner"] = post_obj.owner_username or "N/A"
-    owner_username = data["owner"]
-    data["likes"] = post_obj.likes if isinstance(post_obj.likes, int) else "N/A"
-    data["comments"] = post_obj.comments if isinstance(post_obj.comments, int) else "N/A"
-    if hasattr(post_obj, "date_utc") and post_obj.date_utc:
-        data["post_date"] = post_obj.date_utc.strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        data["owner"] = post_obj.owner_username or "N/A"
+        owner_username = data["owner"] # Get owner_username for Selenium call
+        data["likes"] = post_obj.likes if isinstance(post_obj.likes, int) else "N/A"
+        data["comments"] = post_obj.comments if isinstance(post_obj.comments, int) else "N/A"
 
-    if post_obj.is_video:
-        # Instaloader's video_view_count is often unreliable for non-logged-in sessions.
-        # We will prioritize Selenium for views.
-        logging.info("Post is a video. Proceeding to scrape views using Selenium.")
-        
-        if owner_username == "N/A" or not owner_username:
-            logging.error(f"Cannot use Selenium: Owner username for {shortcode} is unknown.")
-            data["views"] = "N/A (Owner Unknown)"
-        else:
-            if app_instance:
-                app_instance.set_status_from_thread(f"Attempting Selenium for {shortcode} views...")
-            
-            selenium_result = await scrape_views_selenium(post_url, app_instance, shortcode, owner_username)
-            
-            if isinstance(selenium_result, int):
-                data["views"] = selenium_result
-            else: # Handle error strings from Selenium
-                data["views"] = selenium_result
-                if data.get("error"):
-                    data["error"] += f" | {selenium_result}"
+        # Post date:
+        if hasattr(post_obj, "date_utc") and post_obj.date_utc:
+            data["post_date"] = post_obj.date_utc.strftime("%Y-%m-%d %H:%M:%S")
+
+        # Intentional: We are NOT using Instaloader's `video_view_count` for views as per user's preference.
+        # This data point is still available from Instaloader but will be overridden by later methods.
+        if post_obj.is_video:
+            try:
+                views_from_instaloader = post_obj.video_view_count
+                if isinstance(views_from_instaloader, int):
+                    logging.info(f"Instaloader `video_view_count` found ({views_from_instaloader}), but prioritizing other sources for views count as per user preference.")
                 else:
-                    data["error"] = selenium_result
-    else:
-        data["views"] = "N/A (Not a video)"
+                    logging.info(f"Instaloader `video_view_count` not int for {shortcode}.")
+            except Exception:
+                logging.debug(f"Instaloader `video_view_count` property not found/failed for {shortcode}.")
+        else:
+            data["views"] = "N/A (Not a video)" # Assign "N/A" if not a video, regardless of view source preference
 
+    except Exception as e:
+        data["error"] = f"Metadata extraction error: {e}"
+        logging.error(f"[scrape_post_data] Failed to extract metadata: {e}", exc_info=True)
+
+
+    # --- (4) Determine View Count Priority (User-defined) ---
+    # Only proceed if it's a video and views are still "N/A" (or if Instaloader views aren't desired)
+    if post_obj and data["is_video"]: # Use data["is_video"] which is set from post_obj
+        
+        # --- FIRST ATTEMPT: Direct HTML (requests) ---
+        app_instance.set_status_from_thread(f"Trying Direct HTML for {shortcode} views...")
+        direct_html_views = await scrape_views_direct_html(post_url, shortcode)
+
+        if isinstance(direct_html_views, int):
+            data["views"] = direct_html_views
+            logging.info(f"Views for {shortcode} obtained via Direct HTML: {direct_html_views}")
+        else:
+            # Direct HTML failed, fall back to Selenium (grid view strategy)
+            logging.warning(f"Direct HTML for {shortcode} views failed: {direct_html_views}. Falling back to Selenium (grid view).")
+            app_instance.set_status_from_thread(f"Direct HTML failed; trying Selenium for {shortcode} views from grid...")
+            
+            # Ensure owner_username is available before calling Selenium
+            if owner_username == "N/A" or not owner_username:
+                # If owner_username wasn't found by Instaloader, Selenium cannot navigate to reels tab
+                logging.error(f"Cannot use Selenium grid view: Owner username not available for {shortcode}.")
+                data["views"] = f"N/A (Selenium blocked - owner unknown)"
+                if data["error"]:
+                    data["error"] += " | Selenium blocked (owner unknown)"
+                else:
+                    data["error"] = "Selenium blocked (owner unknown)"
+            else:
+                selenium_result = await scrape_views_selenium(post_url, app_instance, shortcode, owner_username)
+                
+                if isinstance(selenium_result, int):
+                    data["views"] = selenium_result
+                else:
+                    data["views"] = str(selenium_result) # e.g. "N/A (Error…)"
+                    if data.get("error"):
+                        data["error"] += f" | Selenium: {selenium_result}"
+                    else:
+                        data["error"] = f"Selenium: {selenium_result}"
+    
     # --- (5) Compute engagement rate ---
     likes_val = data.get("likes") if isinstance(data.get("likes"), int) else 0
     comments_val = data.get("comments") if isinstance(data.get("comments"), int) else 0
@@ -577,13 +746,16 @@ async def scrape_post_data(post_url: str, app_instance=None, logged_in_username:
     data["engagement_rate"] = calculate_engagement_rate_post(likes_val, comments_val, views_val)
 
     # --- (6) Final timestamp ---
-    data["last_record"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # Using datetime.now() to get system's local time for saving to DB
+    now_str_local = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    data["last_record"] = now_str_local
 
+    # Update status in your GUI (if provided)
     if app_instance:
-        status_msg = f"Scrape complete for {shortcode}."
         if data.get("error"):
-            status_msg = f"Scrape for {shortcode} completed with errors."
-        app_instance.set_status_from_thread(status_msg)
+            app_instance.set_status_from_thread(f"Scrape for {shortcode} completed with errors.")
+        else:
+            app_instance.set_status_from_thread(f"Scrape complete for {shortcode}.")
 
     logging.info(f"[scrape_post_data] Completed for {shortcode}: {data}")
     return data
@@ -598,13 +770,18 @@ if __name__ == "__main__":
       python scraper.py <reel_url_or_shortcode> [<instaloader_username>]
 
     Example:
-      python scraper.py https://www.instagram.com/reel/C7_QySJyLsq/ your_instaloader_username
-      python scraper.py C7_QySJyLsq
+      python scraper.py https://www.instagram.com/reel/DCSkPtuThsG/ your_instaloader_username
+      python scraper.py DCSkPtuThsG
     """
+    import sys
+    import json
+
+    # Configure basic logging for console output in standalone mode
     logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s'
+        level=logging.INFO, # Changed to INFO, use DEBUG for verbose
+        format='%(asctime)s - %(levelname)s - %(name)s - %(message)s'
     )
+
 
     if len(sys.argv) < 2:
         print("Usage: python scraper.py <reel_url_or_shortcode> [<instaloader_username>]")
@@ -621,8 +798,6 @@ if __name__ == "__main__":
     async def main():
         dummy = DummyApp()
         result = await scrape_post_data(input_val, app_instance=dummy, logged_in_username=username)
-        print("\n--- SCRAPE RESULT ---")
         print(json.dumps(result, indent=4))
-        print("--- END RESULT ---\n")
 
     asyncio.run(main())
