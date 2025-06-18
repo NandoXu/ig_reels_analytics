@@ -8,7 +8,7 @@
 
 <p>This project is a Python-based desktop application designed to scrape Instagram reels metadata—such as views, likes, and comments—and calculate engagement rates for Reels. It features a graphical user interface (GUI), robust scraping logic, and local data storage with import/export capabilities.</p>
 
-<p><a href="https://github.com/NandoXu/ig_reels_analytics/releases/download/Windows_V.1.0/ig_reels_analytics.zip">Download Windows build(v1.0)</a></p>
+<p><a href="https://github.com/NandoXu/ig_reels_analytics/releases/download/Windows_V.1.0/ig_reels_analytics.zip"> here the zip files for windows build</a></p>
 
 <h2>Features</h2>
 <ul>
