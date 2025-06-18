@@ -2,11 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Instagram Reels Analytics App</title>
+  <h1>Instagram Reels Analytics App</h1>
 </head>
 <body>
-
-<h1>Instagram Reels Analytics App</h1>
 
 <p>This project is a Python-based desktop application designed to scrape Instagram reels metadata—such as views, likes, and comments—and calculate engagement rates for Reels. It features a graphical user interface (GUI), robust scraping logic, and local data storage with import/export capabilities.</p>
 
