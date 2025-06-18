@@ -8,26 +8,24 @@
 
 <h1>Instagram Reels Analytics App</h1>
 
-<p>This project is a Python-based desktop application designed to scrape Instagram post metadata—such as views, likes, and comments—and calculate engagement rates for Reels or standard posts. It features a graphical user interface (GUI), robust scraping logic, and local data storage with import/export capabilities.</p>
+<p>This project is a Python-based desktop application designed to scrape Instagram reels metadata—such as views, likes, and comments—and calculate engagement rates for Reels. It features a graphical user interface (GUI), robust scraping logic, and local data storage with import/export capabilities.</p>
 
-<p><a href="https://github.com/YourUsername/Instagram_Reels_Analytics/releases/download/v1.0/Instagram_Reels_Analytics.exe">Download Windows EXE (v1.0)</a></p>
-<p>If certain features do not work as expected, try the latest build:</p>
-<p><a href="https://github.com/YourUsername/Instagram_Reels_Analytics/releases/download/v1.1/Instagram_Reels_Analytics.exe">Download Windows EXE (v1.1)</a></p>
+<p><a href="https://github.com/NandoXu/ig_reels_analytics/releases/tag/Windows_V.1.0">Download Windows build(v1.0)</a></p>
 
 <h2>Features</h2>
 <ul>
-  <li><strong>Post Metadata Scraping:</strong> Retrieves views, likes, comments, post date, and owner username for Instagram Reels or standard posts.</li>
+  <li><strong>Post Metadata Scraping:</strong> Retrieves views, likes, comments, post date, and owner username for Instagram Reels.</li>
   <li><strong>Engagement Calculation:</strong> Computes engagement rate from scraped data using the formula:
     <pre><code>((likes + comments) / views) * 100</code></pre>
   </li>
-  <li><strong>Persistent Data Storage:</strong> Uses SQLite to store post details and historical records for tracking over time.</li>
-  <li><strong>Graphical User Interface (GUI):</strong> Built with Tkinter for adding/removing post URLs, initiating manual scraping, and viewing stored data.</li>
+  <li><strong>Persistent Data Storage:</strong> Uses SQLite to store reels details and historical records for tracking over time.</li>
+  <li><strong>Graphical User Interface (GUI):</strong> Built with Tkinter for adding/removing reels URLs, initiating manual scraping, and viewing stored data.</li>
   <li><strong>Login Sequence Support:</strong> Integrates with Instaloader for authenticated scraping; falls back to anonymous scraping when not logged in (with limitations).</li>
   <li><strong>Robust Scraping Logic:</strong> Uses Instaloader primarily; if needed, can leverage Selenium/undetected-chromedriver for certain metadata or when authentication is required.</li>
   <li><strong>CSV Import/Export:</strong>
     <ul>
-      <li><strong>Import from CSV:</strong> Load a list of Instagram post URLs (shortcodes) to batch-scrape initial data.</li>
-      <li><strong>Export to CSV:</strong> Export all tracked post records and history for external analysis.</li>
+      <li><strong>Import from CSV:</strong> Load a list of Instagram reels URLs to batch-scrape initial data (just use 1 column fill with reels URls, this is happens because it's not yet standard).</li>
+      <li><strong>Export to CSV:</strong> Export all tracked reels records and history for external analysis.</li>
     </ul>
   </li>
   <li><strong>Exception Handling & Logging:</strong> Comprehensive logging of operations and errors (excluding direct log file references here).</li>
@@ -37,6 +35,7 @@
 <ul>
   <li><strong>Anonymous Scraping:</strong> Without logging in via Instaloader, certain data (especially for private or rate-limited accounts) may not be available or may fail due to Instagram restrictions.</li>
   <li><strong>Selenium Fallback:</strong> Selenium-based scraping for metadata may be slower and subject to anti-bot measures; ensure ChromeDriver version matches installed Chrome.</li>
+  <li><strong>Selenium Fallback:</strong> If the account url is fakes or the account is not exist, it will extremely slow for system relize.</li>
   <li><strong>Rate Limits:</strong> Excessive scraping without appropriate delays may trigger throttling; use responsibly and consider adding cooldowns.</li>
 </ul>
 
@@ -50,15 +49,16 @@
   <li>APScheduler or custom scheduling logic (optional, for periodic scraping if extended)</li>
   <li>Pillow (for any image previews if added)</li>
   <li>BeautifulSoup4 (optional, for HTML parsing fallback)</li>
+  <li>ImageIO</li>
 </ul>
 
 <h2>How to Run</h2>
 <ul>
   <li><strong>Windows (Executable):</strong>
     <ul>
-      <li>Download the Windows EXE from the links above.</li>
+      <li>Download the zip file from the links above.</li>
       <li>Ensure Google Chrome is installed (required for Selenium fallback).</li>
-      <li>Double-click the EXE to launch the app; no further setup required.</li>
+      <li>Extract zip file and Double-click the EXE to launch the app; no further setup required.</li>
     </ul>
   </li>
   <li><strong>Cross-Platform (Python Source):</strong>
@@ -81,10 +81,10 @@
 
 <h2>Usage</h2>
 <ul>
-  <li><strong>Add Post URLs:</strong> Click “Add Post” in the GUI, enter the Instagram post URL (including shortcode). The app will scrape initial metadata.</li>
-  <li><strong>Manual Scrape:</strong> Select one or more posts and click “Scrape Selected” or “Scrape All” to update metadata and engagement rate.</li>
-  <li><strong>Import from CSV:</strong> Click “Import CSV” to load a list of post URLs; each row is scraped upon import.</li>
-  <li><strong>Export to CSV:</strong> Click “Export All” to save tracked post data and historical records to a CSV file.</li>
+  <li><strong>Add Post URLs:</strong> Click “Add Post” in the GUI, enter the Instagram reels URL (including shortcode). The app will scrape initial metadata.</li>
+  <li><strong>Manual Scrape:</strong> Select one or more reels and click “Scrape Selected” or “Scrape All” to update metadata and engagement rate.</li>
+  <li><strong>Import from CSV:</strong> Click “Import CSV” to load a list of reels URLs; each row is scraped upon import.</li>
+  <li><strong>Export to CSV:</strong> Click “Export All” to save tracked reels data and historical records to a CSV file.</li>
   <li><strong>Delete Post Records:</strong> Select entries and click “Delete” to remove from the database.</li>
   <li><strong>View History:</strong> The GUI displays stored records, including last-scraped date, engagement rate, and any error messages.</li>
 </ul>
@@ -92,7 +92,7 @@
 <h2>Project Structure (for Developers/Contributors)</h2>
 <ul>
   <li><code>ig_reels_analytics.py</code>: Main entry point, initializes GUI (Tkinter), database setup, and login sequence.</li>
-  <li><code>database.py</code>: Manages SQLite interactions (create table, save, load, delete) for scraped posts.</li>
+  <li><code>database.py</code>: Manages SQLite interactions (create table, save, load, delete) for scraped reels.</li>
   <li><code>ui/</code>: Contains GUI component modules (e.g., <code>InstagramScraperApp</code>, login overlays).</li>
   <li><code>scraper/</code>: Contains scraping logic and configuration:
     <ul>
