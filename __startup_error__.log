@@ -1,0 +1,30 @@
+2025-06-18 09:29:04.685024 - CRITICAL STARTUP ERROR: expected str, bytes or os.PathLike object, not dict
+Traceback (most recent call last):
+  File "C:\Users\freax\OneDrive\Desktop\rebuild_exe_test\ig_reels_analytics.py", line 71, in <module>
+    app = InstagramScraperApp(root_tk_window)
+  File "C:\Users\freax\OneDrive\Desktop\rebuild_exe_test\ui.py", line 223, in __init__
+    ctk.set_default_color_theme(custom_theme_dict) # Use the dictionary directly
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\freax\AppData\Local\Programs\Python\Python313\Lib\site-packages\customtkinter\__init__.py", line 69, in set_default_color_theme
+    ThemeManager.load_theme(color_string)
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "C:\Users\freax\AppData\Local\Programs\Python\Python313\Lib\site-packages\customtkinter\windows\widgets\theme\theme_manager.py", line 23, in load_theme
+    with open(theme_name_or_path, "r") as f:
+         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: expected str, bytes or os.PathLike object, not dict
+
+2025-06-18 09:29:33.429987 - CRITICAL STARTUP ERROR: expected str, bytes or os.PathLike object, not dict
+Traceback (most recent call last):
+  File "C:\Users\freax\OneDrive\Desktop\rebuild_exe_test\ig_reels_analytics.py", line 71, in <module>
+    app = InstagramScraperApp(root_tk_window)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\freax\OneDrive\Desktop\rebuild_exe_test\ui.py", line 223, in __init__
+    ctk.set_default_color_theme(custom_theme_dict) # Use the dictionary directly
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\freax\AppData\Local\Programs\Python\Python311\Lib\site-packages\customtkinter\__init__.py", line 69, in set_default_color_theme
+    ThemeManager.load_theme(color_string)
+  File "C:\Users\freax\AppData\Local\Programs\Python\Python311\Lib\site-packages\customtkinter\windows\widgets\theme\theme_manager.py", line 23, in load_theme
+    with open(theme_name_or_path, "r") as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: expected str, bytes or os.PathLike object, not dict
+
