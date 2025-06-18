@@ -1,0 +1,9 @@
+APScheduler
+beautifulsoup4
+customtkinter
+Instaloader
+Pillow
+requests
+selenium
+sqlite3
+undetected-chromedriver
