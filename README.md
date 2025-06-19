@@ -57,8 +57,8 @@
       <li>Download the zip file from the links above.</li>
       <li>Ensure Google Chrome is installed (required for Selenium fallback).</li>
       <li>Extract zip file and Double-click the EXE to launch the app; no further setup required.</li>
-      <li>But if you want to run it through script, you can run the windows_setup.bat after download all the sources code</li>
-      <li>Windows: <code>python ig_reels_analytics.py</code> or <code>py -3.11 ig_reels_analytics.py</code></li>
+      <li>But if you want to run it through script, you can clone or download the full project folder from GitHub and run the windows_setup.bat after download all the sources code</li>
+      <li>Open the path of the folder you download and type this. <code>python ig_reels_analytics.py</code> or <code>py -3.11 ig_reels_analytics.py</code></li>
     </ul>
   </li>
   <li><strong>Cross-Platform (Python Source):</strong>
@@ -68,10 +68,10 @@
       <li>Install dependencies:
         <pre><code>pip install -r requirements.txt</code></pre>
       </li>
+      <li>or just run the macOS_setup.sh file through terminal, it will automaticly install the python and all the brew pakage and pyhton with all depency</li>
       <li>Ensure ChromeDriver (for Selenium fallback) is available in PATH or project directory.</li>
       <li>Run the application:
         <ul>
-          <li>Windows: <code>python ig_reels_analytics.py</code> or <code>py -3.11 ig_reels_analytics.py</code></li>
           <li>macOS/Linux: <code>python3 ig_reels_analytics.py</code></li>
         </ul>
       </li>
