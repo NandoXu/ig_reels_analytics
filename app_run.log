@@ -1,0 +1,62 @@
+2025-06-18 19:33:12,847 - INFO - root - Application starting up...
+2025-06-18 19:33:12,854 - INFO - root - Database setup/check complete.
+2025-06-18 19:33:12,972 - CRITICAL - root - CRITICAL STARTUP ERROR: create() argument 1 must be str or None, not Tk
+Traceback (most recent call last):
+  File "C:\Users\freax\OneDrive\Desktop\ig_reels_analytics\ig_reels_analytics.py", line 59, in <module>
+    app = InstagramScraperApp(root_tk_window)
+  File "C:\Users\freax\OneDrive\Desktop\ig_reels_analytics\ui.py", line 35, in __init__
+    super().__init__(*args, **kwargs)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\freax\AppData\Local\Programs\Python\Python313\Lib\tkinter\__init__.py", line 2459, in __init__
+    self.tk = _tkinter.create(screenName, baseName, className, interactive, wantobjects, useTk, sync, use)
+              ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: create() argument 1 must be str or None, not Tk
+
+2025-06-18 19:50:14,690 - INFO - root - Application starting up...
+2025-06-18 19:50:14,697 - INFO - root - Database setup/check complete.
+2025-06-18 19:50:14,861 - CRITICAL - root - CRITICAL STARTUP ERROR: color . must be string ('transparent' or 'color-name' or 'hex-color') or tuple of two strings, not <class 'tkinter.Tk'>
+Traceback (most recent call last):
+  File "C:\Users\freax\OneDrive\Desktop\ig_reels_analytics\ig_reels_analytics.py", line 59, in <module>
+    app = InstagramScraperApp(root_tk_window)
+  File "C:\Users\freax\OneDrive\Desktop\ig_reels_analytics\ui.py", line 38, in __init__
+    super().__init__(*args, **kwargs)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\freax\AppData\Local\Programs\Python\Python313\Lib\site-packages\customtkinter\windows\ctk_tk.py", line 53, in __init__
+    self._fg_color = ThemeManager.theme["CTk"]["fg_color"] if fg_color is None else self._check_color_type(fg_color)
+                                                                                    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\freax\AppData\Local\Programs\Python\Python313\Lib\site-packages\customtkinter\windows\widgets\appearance_mode\appearance_mode_base_class.py", line 61, in _check_color_type
+    raise ValueError(f"color {color} must be string ('transparent' or 'color-name' or 'hex-color') or tuple of two strings, not {type(color)}")
+ValueError: color . must be string ('transparent' or 'color-name' or 'hex-color') or tuple of two strings, not <class 'tkinter.Tk'>
+
+2025-06-18 21:19:19,203 - INFO - root - MainThread - Application starting up (Instaloader + Selenium)...
+2025-06-18 21:19:19,216 - INFO - root - MainThread - Database setup/check complete.
+2025-06-18 21:19:19,340 - CRITICAL - root - MainThread - CRITICAL STARTUP ERROR: color . must be string ('transparent' or 'color-name' or 'hex-color') or tuple of two strings, not <class 'tkinter.Tk'>
+Traceback (most recent call last):
+  File "C:\Users\freax\OneDrive\Desktop\ig_reels_analytics\ig_reels_analytics.py", line 71, in <module>
+    app = InstagramScraperApp(root_tk_window)
+  File "C:\Users\freax\OneDrive\Desktop\ig_reels_analytics\ui.py", line 37, in __init__
+    super().__init__(*args, **kwargs)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\freax\AppData\Local\Programs\Python\Python313\Lib\site-packages\customtkinter\windows\ctk_tk.py", line 53, in __init__
+    self._fg_color = ThemeManager.theme["CTk"]["fg_color"] if fg_color is None else self._check_color_type(fg_color)
+                                                                                    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\freax\AppData\Local\Programs\Python\Python313\Lib\site-packages\customtkinter\windows\widgets\appearance_mode\appearance_mode_base_class.py", line 61, in _check_color_type
+    raise ValueError(f"color {color} must be string ('transparent' or 'color-name' or 'hex-color') or tuple of two strings, not {type(color)}")
+ValueError: color . must be string ('transparent' or 'color-name' or 'hex-color') or tuple of two strings, not <class 'tkinter.Tk'>
+
+2025-06-18 21:19:57,272 - INFO - root - MainThread - Application starting up (Instaloader + Selenium)...
+2025-06-18 21:19:57,273 - INFO - root - MainThread - Database setup/check complete.
+2025-06-18 21:19:57,389 - CRITICAL - root - MainThread - CRITICAL STARTUP ERROR: color . must be string ('transparent' or 'color-name' or 'hex-color') or tuple of two strings, not <class 'tkinter.Tk'>
+Traceback (most recent call last):
+  File "C:\Users\freax\OneDrive\Desktop\ig_reels_analytics\ig_reels_analytics.py", line 71, in <module>
+    app = InstagramScraperApp(root_tk_window)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\freax\OneDrive\Desktop\ig_reels_analytics\ui.py", line 37, in __init__
+    super().__init__(*args, **kwargs)
+  File "C:\Users\freax\AppData\Local\Programs\Python\Python311\Lib\site-packages\customtkinter\windows\ctk_tk.py", line 53, in __init__
+    self._fg_color = ThemeManager.theme["CTk"]["fg_color"] if fg_color is None else self._check_color_type(fg_color)
+                                                                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\freax\AppData\Local\Programs\Python\Python311\Lib\site-packages\customtkinter\windows\widgets\appearance_mode\appearance_mode_base_class.py", line 61, in _check_color_type
+    raise ValueError(f"color {color} must be string ('transparent' or 'color-name' or 'hex-color') or tuple of two strings, not {type(color)}")
+ValueError: color . must be string ('transparent' or 'color-name' or 'hex-color') or tuple of two strings, not <class 'tkinter.Tk'>
+

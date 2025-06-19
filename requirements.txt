@@ -5,5 +5,4 @@ Instaloader
 Pillow
 requests
 selenium
-sqlite3
 undetected-chromedriver

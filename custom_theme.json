@@ -74,8 +74,8 @@
             "#333333"
         ],
         "placeholder_text_color": [
-            "#A9A9A9",
-            "#A9A9A9"
+            "#666666",
+            "#666666"
         ],
         "border_width": 2,
         "corner_radius": 5
@@ -379,11 +379,6 @@
         },
         "Linux": {
             "family": "Ubuntu",
-            "size": 13,
-            "weight": "normal"
-        },
-        "DEFAULT": {
-            "family": "Helvetica",
             "size": 13,
             "weight": "normal"
         }

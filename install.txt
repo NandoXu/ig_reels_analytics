@@ -1,0 +1,13 @@
+How to use this script:
+
+1. Save the script: Save the code above into a file named setup_macos.sh (or any other .sh extension) in the same directory as your requirements.txt file and your Python scripts.
+
+2. Make it executable: Open your Terminal, navigate to the directory where you saved the script, and run:
+
+Bash
+chmod +x setup_macos.sh
+
+Run the script:
+
+Bash
+./setup_macos.sh

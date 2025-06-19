@@ -1,30 +1,103 @@
-2025-06-18 09:29:04.685024 - CRITICAL STARTUP ERROR: expected str, bytes or os.PathLike object, not dict
+2025-06-18 19:50:14.862521 - CRITICAL STARTUP ERROR: color . must be string ('transparent' or 'color-name' or 'hex-color') or tuple of two strings, not <class 'tkinter.Tk'>
 Traceback (most recent call last):
-  File "C:\Users\freax\OneDrive\Desktop\rebuild_exe_test\ig_reels_analytics.py", line 71, in <module>
+  File "C:\Users\freax\OneDrive\Desktop\ig_reels_analytics\ig_reels_analytics.py", line 59, in <module>
     app = InstagramScraperApp(root_tk_window)
-  File "C:\Users\freax\OneDrive\Desktop\rebuild_exe_test\ui.py", line 223, in __init__
-    ctk.set_default_color_theme(custom_theme_dict) # Use the dictionary directly
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\freax\AppData\Local\Programs\Python\Python313\Lib\site-packages\customtkinter\__init__.py", line 69, in set_default_color_theme
-    ThemeManager.load_theme(color_string)
-    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
-  File "C:\Users\freax\AppData\Local\Programs\Python\Python313\Lib\site-packages\customtkinter\windows\widgets\theme\theme_manager.py", line 23, in load_theme
-    with open(theme_name_or_path, "r") as f:
-         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
-TypeError: expected str, bytes or os.PathLike object, not dict
+  File "C:\Users\freax\OneDrive\Desktop\ig_reels_analytics\ui.py", line 38, in __init__
+    super().__init__(*args, **kwargs)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\freax\AppData\Local\Programs\Python\Python313\Lib\site-packages\customtkinter\windows\ctk_tk.py", line 53, in __init__
+    self._fg_color = ThemeManager.theme["CTk"]["fg_color"] if fg_color is None else self._check_color_type(fg_color)
+                                                                                    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\freax\AppData\Local\Programs\Python\Python313\Lib\site-packages\customtkinter\windows\widgets\appearance_mode\appearance_mode_base_class.py", line 61, in _check_color_type
+    raise ValueError(f"color {color} must be string ('transparent' or 'color-name' or 'hex-color') or tuple of two strings, not {type(color)}")
+ValueError: color . must be string ('transparent' or 'color-name' or 'hex-color') or tuple of two strings, not <class 'tkinter.Tk'>
 
-2025-06-18 09:29:33.429987 - CRITICAL STARTUP ERROR: expected str, bytes or os.PathLike object, not dict
+2025-06-18 20:05:15.039687 - CRITICAL STARTUP ERROR: _path_exists: path should be string, bytes, os.PathLike or integer, not NoneType
 Traceback (most recent call last):
-  File "C:\Users\freax\OneDrive\Desktop\rebuild_exe_test\ig_reels_analytics.py", line 71, in <module>
+  File "C:\Users\freax\OneDrive\Desktop\ig_reels_analytics\ig_reels_analytics.py", line 74, in <module>
+    logged_in_instaloader_username = login_sequence(
+        root_tk_window,
+    ...<2 lines>...
+        app._hide_blocking_overlay  # Pass the hide overlay method
+    )
+  File "C:\Users\freax\OneDrive\Desktop\ig_reels_analytics\ui.py", line 1054, in login_sequence
+    if not os.path.exists(CHROMEDRIVER_EXECUTABLE_PATH):
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: _path_exists: path should be string, bytes, os.PathLike or integer, not NoneType
+
+2025-06-18 20:05:20.054017 - CRITICAL STARTUP ERROR: _path_exists: path should be string, bytes, os.PathLike or integer, not NoneType
+Traceback (most recent call last):
+  File "C:\Users\freax\OneDrive\Desktop\ig_reels_analytics\ig_reels_analytics.py", line 74, in <module>
+    logged_in_instaloader_username = login_sequence(
+        root_tk_window,
+    ...<2 lines>...
+        app._hide_blocking_overlay  # Pass the hide overlay method
+    )
+  File "C:\Users\freax\OneDrive\Desktop\ig_reels_analytics\ui.py", line 1054, in login_sequence
+    if not os.path.exists(CHROMEDRIVER_EXECUTABLE_PATH):
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: _path_exists: path should be string, bytes, os.PathLike or integer, not NoneType
+
+2025-06-18 20:05:29.801593 - CRITICAL STARTUP ERROR: _path_exists: path should be string, bytes, os.PathLike or integer, not NoneType
+Traceback (most recent call last):
+  File "C:\Users\freax\OneDrive\Desktop\ig_reels_analytics\ig_reels_analytics.py", line 74, in <module>
+    logged_in_instaloader_username = login_sequence(
+        root_tk_window,
+    ...<2 lines>...
+        app._hide_blocking_overlay  # Pass the hide overlay method
+    )
+  File "C:\Users\freax\OneDrive\Desktop\ig_reels_analytics\ui.py", line 1054, in login_sequence
+    if not os.path.exists(CHROMEDRIVER_EXECUTABLE_PATH):
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: _path_exists: path should be string, bytes, os.PathLike or integer, not NoneType
+
+2025-06-18 20:05:39.882065 - CRITICAL STARTUP ERROR: stat: path should be string, bytes, os.PathLike or integer, not NoneType
+Traceback (most recent call last):
+  File "C:\Users\freax\OneDrive\Desktop\ig_reels_analytics\ig_reels_analytics.py", line 74, in <module>
+    logged_in_instaloader_username = login_sequence(
+                                     ^^^^^^^^^^^^^^^
+  File "C:\Users\freax\OneDrive\Desktop\ig_reels_analytics\ui.py", line 1054, in login_sequence
+    if not os.path.exists(CHROMEDRIVER_EXECUTABLE_PATH):
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen genericpath>", line 19, in exists
+TypeError: stat: path should be string, bytes, os.PathLike or integer, not NoneType
+
+2025-06-18 20:05:58.981482 - CRITICAL STARTUP ERROR: stat: path should be string, bytes, os.PathLike or integer, not NoneType
+Traceback (most recent call last):
+  File "C:\Users\freax\OneDrive\Desktop\ig_reels_analytics\ig_reels_analytics.py", line 74, in <module>
+    logged_in_instaloader_username = login_sequence(
+                                     ^^^^^^^^^^^^^^^
+  File "C:\Users\freax\OneDrive\Desktop\ig_reels_analytics\ui.py", line 1054, in login_sequence
+    if not os.path.exists(CHROMEDRIVER_EXECUTABLE_PATH):
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen genericpath>", line 19, in exists
+TypeError: stat: path should be string, bytes, os.PathLike or integer, not NoneType
+
+2025-06-18 21:19:19.341318 - CRITICAL STARTUP ERROR: color . must be string ('transparent' or 'color-name' or 'hex-color') or tuple of two strings, not <class 'tkinter.Tk'>
+Traceback (most recent call last):
+  File "C:\Users\freax\OneDrive\Desktop\ig_reels_analytics\ig_reels_analytics.py", line 71, in <module>
+    app = InstagramScraperApp(root_tk_window)
+  File "C:\Users\freax\OneDrive\Desktop\ig_reels_analytics\ui.py", line 37, in __init__
+    super().__init__(*args, **kwargs)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\freax\AppData\Local\Programs\Python\Python313\Lib\site-packages\customtkinter\windows\ctk_tk.py", line 53, in __init__
+    self._fg_color = ThemeManager.theme["CTk"]["fg_color"] if fg_color is None else self._check_color_type(fg_color)
+                                                                                    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\freax\AppData\Local\Programs\Python\Python313\Lib\site-packages\customtkinter\windows\widgets\appearance_mode\appearance_mode_base_class.py", line 61, in _check_color_type
+    raise ValueError(f"color {color} must be string ('transparent' or 'color-name' or 'hex-color') or tuple of two strings, not {type(color)}")
+ValueError: color . must be string ('transparent' or 'color-name' or 'hex-color') or tuple of two strings, not <class 'tkinter.Tk'>
+
+2025-06-18 21:19:57.390893 - CRITICAL STARTUP ERROR: color . must be string ('transparent' or 'color-name' or 'hex-color') or tuple of two strings, not <class 'tkinter.Tk'>
+Traceback (most recent call last):
+  File "C:\Users\freax\OneDrive\Desktop\ig_reels_analytics\ig_reels_analytics.py", line 71, in <module>
     app = InstagramScraperApp(root_tk_window)
          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\freax\OneDrive\Desktop\rebuild_exe_test\ui.py", line 223, in __init__
-    ctk.set_default_color_theme(custom_theme_dict) # Use the dictionary directly
-    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\freax\AppData\Local\Programs\Python\Python311\Lib\site-packages\customtkinter\__init__.py", line 69, in set_default_color_theme
-    ThemeManager.load_theme(color_string)
-  File "C:\Users\freax\AppData\Local\Programs\Python\Python311\Lib\site-packages\customtkinter\windows\widgets\theme\theme_manager.py", line 23, in load_theme
-    with open(theme_name_or_path, "r") as f:
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-TypeError: expected str, bytes or os.PathLike object, not dict
+  File "C:\Users\freax\OneDrive\Desktop\ig_reels_analytics\ui.py", line 37, in __init__
+    super().__init__(*args, **kwargs)
+  File "C:\Users\freax\AppData\Local\Programs\Python\Python311\Lib\site-packages\customtkinter\windows\ctk_tk.py", line 53, in __init__
+    self._fg_color = ThemeManager.theme["CTk"]["fg_color"] if fg_color is None else self._check_color_type(fg_color)
+                                                                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\freax\AppData\Local\Programs\Python\Python311\Lib\site-packages\customtkinter\windows\widgets\appearance_mode\appearance_mode_base_class.py", line 61, in _check_color_type
+    raise ValueError(f"color {color} must be string ('transparent' or 'color-name' or 'hex-color') or tuple of two strings, not {type(color)}")
+ValueError: color . must be string ('transparent' or 'color-name' or 'hex-color') or tuple of two strings, not <class 'tkinter.Tk'>
 
