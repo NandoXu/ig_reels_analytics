@@ -68,7 +68,7 @@
       <li>Install dependencies:
         <pre><code>pip install -r requirements.txt</code></pre>
       </li>
-      <li>or just run the macOS_setup.sh file through terminal, it will automaticly install the python and all the brew pakage and pyhton with all depency</li>
+      <li>or just run the macOS_setup.sh file through terminal, it will automaticly install the brew pakage and pyhton with all depency</li>
       <li>Ensure ChromeDriver (for Selenium fallback) is available in PATH or project directory.</li>
       <li>Run the application:
         <ul>
